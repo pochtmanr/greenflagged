@@ -19,7 +19,7 @@ export function Hero() {
       <Container>
         <div className="grid items-start gap-8 lg:grid-cols-[1.05fr,1fr] lg:gap-16">
           <div className="flex flex-col gap-5">
-            <span className="text-label inline-flex items-center gap-2 self-start border border-border-glass bg-[var(--surface)] px-4 py-2 text-text-secondary backdrop-blur-md">
+            <span className="text-label inline-flex items-center gap-2 self-start border border-border-glass bg-[var(--bg)] px-4 py-2 text-text-secondary">
               <Sparkles className="size-3.5 text-green-300" />
               AI contract review — free first scan
             </span>

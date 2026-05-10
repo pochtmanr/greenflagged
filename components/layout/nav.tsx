@@ -35,7 +35,7 @@ export function Nav() {
       className={cn(
         "fixed inset-x-0 top-0 z-40 transition-colors duration-300",
         scrolled
-          ? "bg-[var(--bg)]/85 backdrop-blur-md border-b border-border-glass"
+          ? "bg-[var(--bg)] border-b border-border-glass"
           : "bg-transparent",
       )}
     >
@@ -56,7 +56,7 @@ export function Nav() {
 
         <div className="hidden items-center gap-4 md:flex">
           <Link
-            href="#"
+            href="/sign-in"
             className="text-label text-text-secondary transition-colors hover:text-green-300"
           >
             Sign in
@@ -80,7 +80,7 @@ export function Nav() {
       </div>
 
       {open ? (
-        <div className="md:hidden border-t border-border-glass bg-[var(--bg)]/95 backdrop-blur-md">
+        <div className="md:hidden border-t border-border-glass bg-[var(--bg)]">
           <div className="mx-auto flex max-w-[1440px] flex-col gap-1 px-4 py-6">
             {NAV_LINKS.map((link) => (
               <Link
@@ -93,7 +93,7 @@ export function Nav() {
               </Link>
             ))}
             <Link
-              href="#"
+              href="/sign-in"
               onClick={() => setOpen(false)}
               className="py-3 text-label text-text-secondary transition-colors hover:text-green-300"
             >

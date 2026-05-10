@@ -33,6 +33,45 @@
   --purple-900: #380C57;
   --purple-950: #210733;
 
+  /* Accent — Steel (blue) */
+  --blue-50:  #EEF3F7;
+  --blue-100: #DCE7EF;
+  --blue-200: #B5CADA;
+  --blue-300: #8BACC4;
+  --blue-400: #5A8DB0;
+  --blue-500: #1E5A7E;
+  --blue-600: #1A4E6D;
+  --blue-700: #163E58;
+  --blue-800: #102E43;
+  --blue-900: #0A1E2D;
+  --blue-950: #061320;
+
+  /* Accent — Honey (yellow) */
+  --yellow-50:  #FFFBEC;
+  --yellow-100: #FFF3C8;
+  --yellow-200: #FFE38A;
+  --yellow-300: #FFD24D;
+  --yellow-400: #F5BB1F;
+  --yellow-500: #D69E00;
+  --yellow-600: #AE7E00;
+  --yellow-700: #835E00;
+  --yellow-800: #5A4000;
+  --yellow-900: #362700;
+  --yellow-950: #1B1300;
+
+  /* Accent — Ember (red) */
+  --red-50:  #FDECEC;
+  --red-100: #FAD2D2;
+  --red-200: #F2A5A5;
+  --red-300: #E87575;
+  --red-400: #DC4A4A;
+  --red-500: #C72424;
+  --red-600: #A91D1D;
+  --red-700: #871818;
+  --red-800: #621111;
+  --red-900: #3E0A0A;
+  --red-950: #210505;
+
   /* Secondary — Gray */
   --gray-50:  #F7F8F9;
   --gray-100: #EFF0F2;
@@ -113,6 +152,42 @@
   --color-purple-800: var(--purple-800);
   --color-purple-900: var(--purple-900);
   --color-purple-950: var(--purple-950);
+
+  --color-blue-50:  var(--blue-50);
+  --color-blue-100: var(--blue-100);
+  --color-blue-200: var(--blue-200);
+  --color-blue-300: var(--blue-300);
+  --color-blue-400: var(--blue-400);
+  --color-blue-500: var(--blue-500);
+  --color-blue-600: var(--blue-600);
+  --color-blue-700: var(--blue-700);
+  --color-blue-800: var(--blue-800);
+  --color-blue-900: var(--blue-900);
+  --color-blue-950: var(--blue-950);
+
+  --color-yellow-50:  var(--yellow-50);
+  --color-yellow-100: var(--yellow-100);
+  --color-yellow-200: var(--yellow-200);
+  --color-yellow-300: var(--yellow-300);
+  --color-yellow-400: var(--yellow-400);
+  --color-yellow-500: var(--yellow-500);
+  --color-yellow-600: var(--yellow-600);
+  --color-yellow-700: var(--yellow-700);
+  --color-yellow-800: var(--yellow-800);
+  --color-yellow-900: var(--yellow-900);
+  --color-yellow-950: var(--yellow-950);
+
+  --color-red-50:  var(--red-50);
+  --color-red-100: var(--red-100);
+  --color-red-200: var(--red-200);
+  --color-red-300: var(--red-300);
+  --color-red-400: var(--red-400);
+  --color-red-500: var(--red-500);
+  --color-red-600: var(--red-600);
+  --color-red-700: var(--red-700);
+  --color-red-800: var(--red-800);
+  --color-red-900: var(--red-900);
+  --color-red-950: var(--red-950);
 
   --color-severity-green:  var(--severity-green);
   --color-severity-yellow: var(--severity-yellow);

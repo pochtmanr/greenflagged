@@ -28,6 +28,8 @@ const ANNOTATIONS: { severity: Severity; clause: string; note: string }[] = [
   },
 ];
 
+const CHIPS: Severity[] = ["red", "orange", "yellow", "green"];
+
 export function SampleVerdict() {
   return (
     <Section id="sample" eyebrow="Sample verdict" pad="lg">
@@ -41,6 +43,11 @@ export function SampleVerdict() {
             The four-color scale is the same one a senior contracts lawyer uses
             — just faster, and twenty euros instead of two hundred.
           </p>
+          <div className="mt-8 flex flex-wrap gap-2">
+            {CHIPS.map((s) => (
+              <VerdictBadge key={s} severity={s} />
+            ))}
+          </div>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.1fr,1fr]">
