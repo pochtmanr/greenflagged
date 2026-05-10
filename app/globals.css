@@ -1,26 +1,366 @@
 @import "tailwindcss";
 
+/* =============================================================
+   Green Flagged — Design Tokens
+   Source: docs/Creative-Studio-Branding-Culture-DESIGN.md
+   Adapted: primary blue #1A33FF → sage green #4A7A5C
+============================================================= */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Primary — Sage Green */
+  --green-50:  #EFF4F1;
+  --green-100: #DDE8E1;
+  --green-200: #BCD0C2;
+  --green-300: #94B5A1;
+  --green-400: #6E9882;
+  --green-500: #4A7A5C;
+  --green-600: #3F6A4F;
+  --green-700: #335640;
+  --green-800: #264130;
+  --green-900: #1A2D21;
+  --green-950: #0F1C14;
+
+  /* Tertiary — Purple */
+  --purple-50:  #F8EDFF;
+  --purple-100: #F1DCFF;
+  --purple-200: #E2B9FF;
+  --purple-300: #D496FF;
+  --purple-400: #BE61FF;
+  --purple-500: #A524FF;
+  --purple-600: #8E1FDB;
+  --purple-700: #7419B3;
+  --purple-800: #561385;
+  --purple-900: #380C57;
+  --purple-950: #210733;
+
+  /* Secondary — Gray */
+  --gray-50:  #F7F8F9;
+  --gray-100: #EFF0F2;
+  --gray-200: #DFE2E5;
+  --gray-300: #CFD3D9;
+  --gray-400: #B8BDC5;
+  --gray-500: #9CA3AF;
+  --gray-600: #868C97;
+  --gray-700: #6D727B;
+  --gray-800: #51555B;
+  --gray-900: #35373C;
+  --gray-950: #1F2123;
+
+  /* Neutral — Warm off-white */
+  --neutral-50:  #FEFEFE;
+  --neutral-100: #FDFCFC;
+  --neutral-200: #FAFAFA;
+  --neutral-300: #F8F7F7;
+  --neutral-400: #F4F3F3;
+  --neutral-500: #F0EFEE;
+  --neutral-600: #CECECD;
+  --neutral-700: #A8A7A7;
+  --neutral-800: #7D7C7C;
+  --neutral-900: #525151;
+  --neutral-950: #303030;
+
+  /* Verdict severity scale — sage green for green-flagged */
+  --severity-green:  #4A7A5C;
+  --severity-yellow: #FFD600;
+  --severity-orange: #FF8A1F;
+  --severity-red:    #FF3D5C;
+
+  /* Roles */
+  --bg: #121212;
+  --surface: rgba(18, 18, 18, 0.5);
+  --surface-solid: #F2F0EC;
+  --text-primary: #F2F0EC;
+  --text-secondary: #9CA3AF;
+  --text-accent: #94B5A1;
+  --border-glass: rgba(255, 255, 255, 0.12);
+  --border-strong: #FFFFFF;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* =============================================================
+   Tailwind v4 theme bindings
+============================================================= */
+
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-solid: var(--surface-solid);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-accent: var(--text-accent);
+  --color-border-glass: var(--border-glass);
+  --color-border-strong: var(--border-strong);
+
+  --color-green-50:  var(--green-50);
+  --color-green-100: var(--green-100);
+  --color-green-200: var(--green-200);
+  --color-green-300: var(--green-300);
+  --color-green-400: var(--green-400);
+  --color-green-500: var(--green-500);
+  --color-green-600: var(--green-600);
+  --color-green-700: var(--green-700);
+  --color-green-800: var(--green-800);
+  --color-green-900: var(--green-900);
+  --color-green-950: var(--green-950);
+
+  --color-purple-50:  var(--purple-50);
+  --color-purple-100: var(--purple-100);
+  --color-purple-200: var(--purple-200);
+  --color-purple-300: var(--purple-300);
+  --color-purple-400: var(--purple-400);
+  --color-purple-500: var(--purple-500);
+  --color-purple-600: var(--purple-600);
+  --color-purple-700: var(--purple-700);
+  --color-purple-800: var(--purple-800);
+  --color-purple-900: var(--purple-900);
+  --color-purple-950: var(--purple-950);
+
+  --color-severity-green:  var(--severity-green);
+  --color-severity-yellow: var(--severity-yellow);
+  --color-severity-orange: var(--severity-orange);
+  --color-severity-red:    var(--severity-red);
+
+  --font-sans: var(--font-inter), Inter, system-ui, sans-serif;
+
+  --radius-md: 2px;
+  --radius-pill: 9999px;
+
+  --spacing-section: 96px;
+  --spacing-section-x: 32px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* =============================================================
+   Base
+============================================================= */
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  background: var(--bg);
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  /* body-md: 16/24, weight 500, normal letter-spacing */
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+  letter-spacing: normal;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--green-500);
+  color: var(--neutral-500);
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+/* =============================================================
+   Typography utilities — design.md type roles
+   display-lg: Inter 128/700/128 line-height/-0.04em/UPPER
+   body-md:    Inter 16/500/24
+   label-md:   Inter 12/500/16/0.3px/UPPER
+============================================================= */
+
+@utility text-display {
+  font-family: var(--font-sans);
+  /* Spec is 128px; clamp keeps mobile readable, hits 128 at ≥1067px viewport. */
+  font-size: clamp(56px, 12vw, 128px);
+  line-height: 1; /* 128px line-height on 128px font = ratio 1 */
+  letter-spacing: -0.04em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+@utility text-display-sm {
+  font-family: var(--font-sans);
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+@utility text-body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: normal;
+  font-weight: 500;
+  text-transform: none;
+}
+
+@utility text-label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.3px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+/* Slightly bolder label (buttons.md Item 4/5: 12/600/16/0.3px UPPER) */
+@utility text-label-bold {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.3px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Prominent link (buttons.md Item 2: 16/600/24/-0.64px UPPER) */
+@utility text-link-lg {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: -0.04em; /* -0.64px on 16px = -0.04em */
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* =============================================================
+   Surface utilities — glass + gradient shell
+============================================================= */
+
+@utility glass-card {
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 2px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+@utility glass-strong {
+  background: rgba(18, 18, 18, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 2px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+@utility gradient-shell {
+  position: relative;
+  padding: 24px;
+  background-image: linear-gradient(
+    45deg,
+    rgba(74, 122, 92, 0.22) 25%,
+    rgba(0, 0, 0, 0) 25%,
+    rgba(0, 0, 0, 0) 50%,
+    rgba(74, 122, 92, 0.22) 50%,
+    rgba(74, 122, 92, 0.22) 75%,
+    rgba(0, 0, 0, 0) 75%,
+    rgba(0, 0, 0, 0)
+  );
+  background-size: 8px 8px;
+}
+
+@utility grid-bleed {
+  width: 100%;
+  padding-inline: 16px;
+}
+
+/* =============================================================
+   GSAP masked reveal
+============================================================= */
+
+.gs-reveal-wrapper {
+  overflow: hidden;
+  display: inline-block;
+}
+
+.gs-reveal-text {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* =============================================================
+   Dot-matrix DOM fallback
+============================================================= */
+
+.dot-matrix-fallback {
+  background-image:
+    radial-gradient(circle, rgba(110, 152, 130, 0.22) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: 0 0;
+}
+
+/* =============================================================
+   Scroll progress hairline
+============================================================= */
+
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: var(--green-400);
+  transform-origin: left;
+  transform: scaleX(var(--scroll, 0));
+  z-index: 50;
+  pointer-events: none;
+  box-shadow: 0 0 12px var(--green-500);
+}
+
+/* =============================================================
+   Keyframes for Radix primitives
+============================================================= */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to   { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+}
+
+@keyframes accordion-down {
+  from { height: 0; }
+  to   { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to   { height: 0; }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 0.55; }
+}
+
+/* =============================================================
+   Focus
+============================================================= */
+
+:where(button, a, input, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--green-400);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* =============================================================
+   Reduced motion
+============================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
