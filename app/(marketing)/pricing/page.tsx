@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { Container } from "@/components/layout/container";
-import { Section } from "@/components/layout/section";
-import { PricingToggle } from "@/components/sections/pricing-toggle";
-import { Faq } from "@/components/sections/faq";
+import { Pricing } from "@/components/marketing/pricing";
+import { FAQ } from "@/components/marketing/faq";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -13,27 +11,38 @@ export const metadata: Metadata = {
 export default function PricingPage() {
   return (
     <>
-      <Section pad="lg">
-        <Container>
-          <div className="mb-16 max-w-3xl">
-            <span className="text-label text-green-300">Pricing</span>
-            <h1 className="mt-4 text-display-sm font-bold uppercase leading-[0.95] tracking-[-0.03em]">
-              One coffee.<br />
-              <span className="text-green-300">Two hundred saved.</span>
+      <section className="section" style={{ paddingTop: 144 }}>
+        <div className="container">
+          <div style={{ maxWidth: 760, marginBottom: 56 }}>
+            <span className="gf-label">// PRICING</span>
+            <h1 className="gf-h1" style={{ marginTop: 14 }}>
+              One coffee.
+              <br />
+              <span style={{ color: "var(--green-500)" }}>Two hundred saved.</span>
             </h1>
-            <p className="mt-6 text-base leading-7 text-text-secondary">
+            <p className="gf-body" style={{ marginTop: 24, fontSize: 17 }}>
               Start with one scan. Subscribe when you sign contracts often.
               Cancel any time. Annual plans get two months free.
             </p>
           </div>
-          <PricingToggle />
-          <p className="mt-12 text-center text-xs text-text-secondary">
+        </div>
+      </section>
+
+      <Pricing />
+
+      <section className="section--thin">
+        <div className="container">
+          <p
+            className="gf-mono-sm"
+            style={{ textAlign: "center", color: "var(--fg-3)" }}
+          >
             Prices shown in EUR. VAT applied at checkout for EU customers. We
             offer a 14-day full refund on annual plans.
           </p>
-        </Container>
-      </Section>
-      <Faq />
+        </div>
+      </section>
+
+      <FAQ />
     </>
   );
 }

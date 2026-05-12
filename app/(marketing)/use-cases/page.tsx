@@ -1,8 +1,4 @@
 import type { Metadata } from "next";
-import { Container } from "@/components/layout/container";
-import { Section } from "@/components/layout/section";
-import { GlassCard } from "@/components/ui/glass-card";
-import { VerdictBadge } from "@/components/brand/verdict-badge";
 
 export const metadata: Metadata = {
   title: "Use cases",
@@ -10,7 +6,15 @@ export const metadata: Metadata = {
     "Built for freelancers, agencies, founders, and creators. Get the verdict before you sign anything.",
 };
 
-const CASES = [
+type Severity = "red" | "orange" | "yellow" | "green";
+
+const CASES: Array<{
+  id: string;
+  title: string;
+  pitch: string;
+  examples: string[];
+  flag: { severity: Severity; title: string; body: string };
+}> = [
   {
     id: "freelancers",
     title: "Freelancers",
@@ -23,9 +27,10 @@ const CASES = [
       "Subcontractor pass-through deals",
     ],
     flag: {
-      severity: "red" as const,
+      severity: "red",
       title: "Typical red flag",
-      body: '"All IP, including pre-existing work, transfers to Client on delivery." — Insert a prior-work carve-out or refuse.',
+      body:
+        '"All IP, including pre-existing work, transfers to Client on delivery." — Insert a prior-work carve-out or refuse.',
     },
   },
   {
@@ -40,9 +45,10 @@ const CASES = [
       "Master services agreements + SOWs",
     ],
     flag: {
-      severity: "orange" as const,
+      severity: "orange",
       title: "Typical warning",
-      body: 'Most-favored-nation pricing clauses that auto-discount your rate. Cap them by term or scope.',
+      body:
+        "Most-favored-nation pricing clauses that auto-discount your rate. Cap them by term or scope.",
     },
   },
   {
@@ -57,9 +63,10 @@ const CASES = [
       "Term sheets",
     ],
     flag: {
-      severity: "red" as const,
+      severity: "red",
       title: "Typical red flag",
-      body: "Discount + valuation cap stacking on a SAFE in a way that compounds dilution at the next round.",
+      body:
+        "Discount + valuation cap stacking on a SAFE in a way that compounds dilution at the next round.",
     },
   },
   {
@@ -74,75 +81,107 @@ const CASES = [
       "Licensing and merchandise deals",
     ],
     flag: {
-      severity: "orange" as const,
+      severity: "orange",
       title: "Typical warning",
-      body: 'Exclusivity windows ("no competing brands for 12 months") that exceed the campaign duration. Negotiate down hard.',
+      body:
+        'Exclusivity windows ("no competing brands for 12 months") that exceed the campaign duration. Negotiate down hard.',
     },
   },
 ];
 
+const SEV_LABEL: Record<Severity, string> = {
+  red: "RED FLAG",
+  orange: "ORANGE WARNING",
+  yellow: "YELLOW NOTE",
+  green: "GREEN-FLAGGED",
+};
+
 export default function UseCasesPage() {
   return (
     <>
-      <Section pad="lg">
-        <Container>
-          <div className="max-w-3xl">
-            <span className="text-label text-green-300">Use cases</span>
-            <h1 className="mt-4 text-display-sm font-bold uppercase leading-[0.95] tracking-[-0.03em]">
-              Built for the people<br />
-              <span className="text-green-300">who sign without lawyers.</span>
+      <section className="section" style={{ paddingTop: 144 }}>
+        <div className="container">
+          <div style={{ maxWidth: 760 }}>
+            <span className="gf-label">// USE CASES</span>
+            <h1 className="gf-h1" style={{ marginTop: 14 }}>
+              Built for the people
+              <br />
+              <span style={{ color: "var(--green-500)" }}>
+                who sign without lawyers.
+              </span>
             </h1>
-            <p className="mt-6 text-base leading-7 text-text-secondary">
-              We didn&apos;t build Green Flagged for in-house legal teams.
-              We built it for the freelance designer, the indie founder, the
+            <p className="gf-body" style={{ marginTop: 24, fontSize: 17 }}>
+              We didn&apos;t build Green Flagged for in-house legal teams. We
+              built it for the freelance designer, the indie founder, the
               creator with an inbox full of brand deals — anyone who signs
               contracts and can&apos;t afford to send each one to counsel.
             </p>
           </div>
-        </Container>
-      </Section>
+        </div>
+      </section>
 
       {CASES.map((c, i) => (
-        <Section
+        <section
           key={c.id}
           id={c.id}
-          pad="lg"
-          eyebrow={`0${i + 1} · ${c.title}`}
-          className={i % 2 === 1 ? "bg-[rgba(255,255,255,0.02)]" : ""}
+          className={"section " + (i % 2 === 1 ? "section--sunken" : "")}
         >
-          <Container>
-            <div className="grid gap-12 lg:grid-cols-[1fr,1fr] lg:gap-16">
-              <div className="flex flex-col gap-6">
-                <h2 className="text-display-sm font-bold uppercase leading-[0.95] tracking-[-0.03em]">
-                  For {c.title.toLowerCase()}.
-                </h2>
-                <p className="text-base leading-7 text-text-secondary">
-                  {c.pitch}
-                </p>
-                <ul className="mt-2 flex flex-col gap-3">
-                  {c.examples.map((ex) => (
-                    <li
-                      key={ex}
-                      className="flex items-center gap-3 text-sm text-text-primary"
-                    >
-                      <span className="size-1.5 rounded-full bg-green-500" />
-                      {ex}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <GlassCard padded="lg" className="gap-4">
-                <VerdictBadge severity={c.flag.severity} />
-                <h3 className="text-base font-semibold uppercase tracking-[0.02em]">
+          <div className="container">
+            <div className="section__heading" style={{ marginBottom: 40 }}>
+              <span className="gf-label section__eyebrow">
+                // 0{i + 1}  {c.title}
+              </span>
+              <h2 className="gf-h2 section__lead">For {c.title.toLowerCase()}.</h2>
+              <p className="gf-body section__sub">{c.pitch}</p>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 64,
+              }}
+              className="usecase__grid"
+            >
+              <ul
+                style={{
+                  listStyle: "none",
+                  padding: 0,
+                  margin: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                }}
+              >
+                {c.examples.map((ex) => (
+                  <li
+                    key={ex}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      fontSize: 14,
+                      color: "var(--fg-1)",
+                    }}
+                  >
+                    <span className="trust-dot" />
+                    {ex}
+                  </li>
+                ))}
+              </ul>
+              <div className="gf-card">
+                <span className={"gf-tag sev-" + c.flag.severity}>
+                  {SEV_LABEL[c.flag.severity]}
+                </span>
+                <h3 className="gf-h4" style={{ marginTop: 16 }}>
                   {c.flag.title}
                 </h3>
-                <p className="text-sm leading-6 text-text-secondary">
+                <p className="gf-body-sm" style={{ marginTop: 12 }}>
                   {c.flag.body}
                 </p>
-              </GlassCard>
+              </div>
             </div>
-          </Container>
-        </Section>
+          </div>
+        </section>
       ))}
     </>
   );

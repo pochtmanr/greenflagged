@@ -3,8 +3,6 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { GlassCard } from "@/components/ui/glass-card";
 
 type Phase = "idle" | "submitting" | "sent";
 
@@ -38,33 +36,47 @@ export function SignInForm() {
 
   if (phase === "sent") {
     return (
-      <GlassCard padded="lg" strong className="gap-4">
-        <div className="text-label text-green-300">Check your inbox</div>
-        <h3 className="text-2xl font-bold uppercase tracking-[-0.02em]">
-          Link sent.
-        </h3>
-        <p className="text-sm leading-6 text-text-secondary">
+      <div className="gf-frame" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <span className="gf-frame-bl" />
+        <span className="gf-frame-br" />
+        <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
+          // CHECK YOUR INBOX
+        </span>
+        <h3 className="gf-h3">Link sent.</h3>
+        <p className="gf-body-sm">
           We just emailed a one-time sign-in link to{" "}
-          <span className="text-text-primary">{email}</span>. It expires in 15
-          minutes. Don&apos;t see it? Check spam or{" "}
+          <span style={{ color: "var(--fg-1)" }}>{email}</span>. It expires in
+          15 minutes. Don&apos;t see it? Check spam or{" "}
           <button
             type="button"
             onClick={() => setPhase("idle")}
-            className="text-green-300 hover:underline"
+            style={{
+              color: "var(--green-700)",
+              borderBottom: "1px solid currentColor",
+              background: "transparent",
+              padding: 0,
+              cursor: "pointer",
+            }}
           >
             resend
           </button>
           .
         </p>
-      </GlassCard>
+      </div>
     );
   }
 
   return (
-    <GlassCard padded="lg" strong className="gap-6">
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-2">
-          <span className="text-label text-text-secondary">Email</span>
+    <div className="gf-frame" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <span className="gf-frame-bl" />
+      <span className="gf-frame-br" />
+
+      <form
+        onSubmit={onSubmit}
+        style={{ display: "flex", flexDirection: "column", gap: 16 }}
+      >
+        <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <span className="gf-label">// EMAIL</span>
           <Input
             required
             type="email"
@@ -76,62 +88,85 @@ export function SignInForm() {
         </label>
 
         {error ? (
-          <p className="text-xs text-[var(--severity-red)]">{error}</p>
+          <p
+            className="gf-mono-sm"
+            style={{ color: "var(--sev-red)" }}
+          >
+            {error}
+          </p>
         ) : null}
 
-        <Button
+        <button
           type="submit"
-          variant="light"
-          size="lg"
+          className="gf-btn"
           disabled={phase === "submitting" || !email}
-          className="self-start"
+          style={{ alignSelf: "flex-start" }}
         >
           {phase === "submitting" ? (
             <>
-              <Loader2 className="size-4 animate-spin" />
+              <Loader2 width={14} height={14} className="animate-spin" />
               Sending link…
             </>
           ) : (
             <>
-              Send magic link
-              <span aria-hidden className="btn-arrow transition-transform">
-                →
-              </span>
+              Send magic link <span className="arrow">→</span>
             </>
           )}
-        </Button>
+        </button>
       </form>
 
-      <div className="flex items-center gap-4 text-label text-text-secondary">
-        <span className="h-px flex-1 bg-border-glass" />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}
+        className="gf-label"
+      >
+        <span
+          aria-hidden
+          style={{ height: 1, flex: 1, background: "var(--rule)" }}
+        />
         or
-        <span className="h-px flex-1 bg-border-glass" />
+        <span
+          aria-hidden
+          style={{ height: 1, flex: 1, background: "var(--rule)" }}
+        />
       </div>
 
       <button
         type="button"
         disabled
-        className="inline-flex h-12 items-center justify-center gap-3 rounded-[2px] border border-border-glass bg-[var(--surface)] px-4 text-sm text-text-secondary backdrop-blur-md transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+        className="gf-btn gf-btn-ghost"
+        style={{ justifyContent: "center" }}
       >
         <GoogleGlyph />
         Continue with Google
-        <span className="ml-2 inline-flex items-center rounded-full border border-green-400/40 bg-green-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.3px] text-green-300">
-          Soon
+        <span
+          style={{
+            marginLeft: 8,
+            padding: "2px 6px",
+            fontSize: 9,
+            border: "1px solid currentColor",
+            letterSpacing: "0.14em",
+          }}
+        >
+          SOON
         </span>
       </button>
 
-      <p className="text-[11px] leading-5 text-text-secondary">
+      <p className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
         By signing in you agree to our{" "}
-        <a href="/terms" className="text-text-primary hover:underline">
+        <a href="/terms" style={{ color: "var(--fg-1)" }}>
           Terms
         </a>{" "}
         and{" "}
-        <a href="/privacy" className="text-text-primary hover:underline">
+        <a href="/privacy" style={{ color: "var(--fg-1)" }}>
           Privacy Policy
         </a>
         .
       </p>
-    </GlassCard>
+    </div>
   );
 }
 
@@ -139,8 +174,8 @@ function GoogleGlyph() {
   return (
     <svg
       aria-hidden
-      width="16"
-      height="16"
+      width="14"
+      height="14"
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"

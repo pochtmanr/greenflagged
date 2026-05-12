@@ -1,37 +1,58 @@
 import Link from "next/link";
 import { cn } from "@/lib/cn";
+import { LogoMark } from "@/components/brand/logo-mark";
 
 type WordmarkProps = {
   className?: string;
   href?: string;
   asLink?: boolean;
+  style?: React.CSSProperties;
+  /** Hide the GREEN • FLAGGED text and show only the logo mark. */
+  markOnly?: boolean;
+  /** Show the logo mark alongside the text. Default true. */
+  withMark?: boolean;
+  /** Logo mark height in px. */
+  markSize?: number;
 };
 
 export function Wordmark({
   className,
   href = "/",
   asLink = true,
+  style,
+  markOnly = false,
+  withMark = true,
+  markSize = 22,
 }: WordmarkProps) {
+  const showMark = markOnly || withMark;
+  const showText = !markOnly;
+
   const content = (
-    <span
-      className={cn(
-        "inline-flex items-center gap-2 text-label text-[13px] tracking-[0.32px]",
-        className,
-      )}
-    >
-      <span className="font-bold tracking-[-0.01em]">GREEN</span>
-      <span
-        aria-hidden
-        className="size-2 rounded-full bg-green-300"
-        style={{ boxShadow: "0 0 12px var(--green-400)" }}
-      />
-      <span className="font-bold tracking-[-0.01em]">FLAGGED</span>
-    </span>
+    <>
+      {showMark ? (
+        <LogoMark
+          size={markSize}
+          style={{ color: "var(--green-500)", flexShrink: 0 }}
+        />
+      ) : null}
+      {showText ? <span>GREEN FLAGGED</span> : null}
+    </>
   );
 
-  if (!asLink) return content;
+  if (!asLink) {
+    return (
+      <span className={cn("wordmark", className)} style={style}>
+        {content}
+      </span>
+    );
+  }
   return (
-    <Link href={href} aria-label="Green Flagged home">
+    <Link
+      href={href}
+      aria-label="Green Flagged home"
+      className={cn("wordmark", className)}
+      style={style}
+    >
       {content}
     </Link>
   );

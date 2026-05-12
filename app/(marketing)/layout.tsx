@@ -1,8 +1,6 @@
-import { Nav } from "@/components/layout/nav";
-import { Footer } from "@/components/layout/footer";
-import { ScrollProgress } from "@/components/layout/scroll-progress";
-import { CookieBanner } from "@/components/layout/cookie-banner";
-import { DotMatrixCanvas } from "@/components/brand/dot-matrix-canvas";
+import { Nav } from "@/components/marketing/nav";
+import { Footer } from "@/components/marketing/footer";
+import { CookieBanner } from "@/components/marketing/cookie-banner";
 
 export default function MarketingLayout({
   children,
@@ -11,10 +9,8 @@ export default function MarketingLayout({
 }) {
   return (
     <>
-      <DotMatrixCanvas />
-      <ScrollProgress />
       <Nav />
-      <main className="relative pt-16">{children}</main>
+      <main>{children}</main>
       <Footer />
       <CookieBanner />
     </>

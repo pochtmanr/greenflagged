@@ -1,7 +1,4 @@
 import type { Metadata } from "next";
-import { Container } from "@/components/layout/container";
-import { Section } from "@/components/layout/section";
-import { GlassCard } from "@/components/ui/glass-card";
 
 export const metadata: Metadata = {
   title: "About",
@@ -14,29 +11,21 @@ const PRINCIPLES = [
     label: "Plain English",
     body:
       "Every flag is written the way a smart friend would explain it. No Latin, no fine print, no hedging.",
-    tone: "text-green-300",
-    dot: "bg-green-400",
   },
   {
     label: "No surprises",
     body:
       "One flat price. No paywalls mid-verdict. No upsells dressed as warnings. The bill is the bill.",
-    tone: "text-yellow-300",
-    dot: "bg-yellow-300",
   },
   {
     label: "Your file, your file",
     body:
       "Contracts are wiped after the verdict. We never train on your documents. The whole company is GDPR by default.",
-    tone: "text-blue-300",
-    dot: "bg-blue-300",
   },
   {
     label: "Honest about limits",
     body:
-      "We’re fast, cheap, and accurate enough for 90% of contracts. We will tell you when you need a lawyer.",
-    tone: "text-red-300",
-    dot: "bg-red-300",
+      "We're fast, cheap, and accurate enough for 90% of contracts. We will tell you when you need a lawyer.",
   },
 ];
 
@@ -50,17 +39,30 @@ const STATS = [
 export default function AboutPage() {
   return (
     <>
-      <Section pad="lg">
-        <Container>
-          <div className="grid gap-12 lg:grid-cols-[1fr,2fr] lg:gap-16">
+      <section className="section" style={{ paddingTop: 144 }}>
+        <div className="container">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr)",
+              gap: 64,
+            }}
+            className="about__grid"
+          >
             <div>
-              <span className="text-label text-green-300">About</span>
-              <h1 className="mt-4 text-display-sm font-bold uppercase leading-[0.95] tracking-[-0.03em]">
-                Small team.<br />
-                <span className="text-blue-400">Strong opinions.</span>
+              <span className="gf-label">// ABOUT</span>
+              <h1 className="gf-h1" style={{ marginTop: 14 }}>
+                Small team.
+                <br />
+                <span style={{ color: "var(--green-500)" }}>
+                  Strong opinions.
+                </span>
               </h1>
             </div>
-            <div className="flex flex-col gap-8 text-base leading-7 text-text-secondary">
+            <div
+              className="gf-body"
+              style={{ display: "flex", flexDirection: "column", gap: 24 }}
+            >
               <p>
                 Green Flagged exists because the cost of bad contracts falls on
                 the people least equipped to read them. Freelancers, indie
@@ -77,73 +79,94 @@ export default function AboutPage() {
               </p>
               <p>
                 The product is built and operated by{" "}
-                <a
-                  href="https://simnetiq.com"
-                  className="text-text-primary hover:text-blue-300"
-                >
+                <a href="https://simnetiq.com" style={{ color: "var(--fg-1)" }}>
                   Simnetiq Ltd
                 </a>
                 , a small EU-based studio. We process payments through Paddle,
-                which acts as our merchant of record and handles VAT
-                compliance for EU customers.
+                which acts as our merchant of record and handles VAT compliance
+                for EU customers.
               </p>
-              <GlassCard padded="lg" className="gap-3">
-                <span className="text-label text-yellow-300">Disclaimer</span>
-                <p className="text-sm leading-6 text-text-secondary">
+              <div className="gf-frame" style={{ marginTop: 16 }}>
+                <span className="gf-frame-bl" />
+                <span className="gf-frame-br" />
+                <span className="gf-label">// DISCLAIMER</span>
+                <p className="gf-body-sm" style={{ marginTop: 12 }}>
                   Green Flagged is informational and not a substitute for advice
                   from a licensed attorney. Reviews do not create an
                   attorney-client relationship. For decisions that matter, talk
                   to a lawyer in your jurisdiction.
                 </p>
-              </GlassCard>
+              </div>
             </div>
           </div>
-        </Container>
-      </Section>
+        </div>
+      </section>
 
-      <Section pad="md" reveal={false}>
-        <Container>
-          <div className="grid grid-cols-2 gap-px bg-border-glass md:grid-cols-4">
+      <section className="section--thin">
+        <div className="container">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: 1,
+              background: "var(--rule)",
+              border: "1px solid var(--rule)",
+            }}
+            className="about__stats"
+          >
             {STATS.map((s) => (
               <div
                 key={s.label}
-                className="bg-[var(--bg)] p-8"
+                style={{ background: "var(--bg)", padding: "40px 32px" }}
               >
-                <div className="text-display-sm leading-none text-text-primary">
+                <div
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "var(--type-h2)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.03em",
+                    lineHeight: 1,
+                    color: "var(--fg-1)",
+                  }}
+                >
                   {s.value}
                 </div>
-                <div className="mt-3 text-label text-text-secondary">
+                <div className="gf-label" style={{ marginTop: 14 }}>
                   {s.label}
                 </div>
               </div>
             ))}
           </div>
-        </Container>
-      </Section>
+        </div>
+      </section>
 
-      <Section pad="lg" eyebrow="What we believe">
-        <Container>
-          <h2 className="mb-12 max-w-2xl text-display-sm font-bold uppercase leading-[0.95] tracking-[-0.03em]">
-            Four <span className="text-blue-400">principles.</span>
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2">
+      <section className="section">
+        <div className="container">
+          <div className="section__heading">
+            <span className="gf-label section__eyebrow">// WHAT WE BELIEVE</span>
+            <h2 className="gf-h1 section__lead">
+              Four <span style={{ color: "var(--green-500)" }}>principles.</span>
+            </h2>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: 16,
+            }}
+            className="about__principles"
+          >
             {PRINCIPLES.map((p) => (
-              <GlassCard key={p.label} padded="lg" className="gap-4">
-                <div className="flex items-center gap-3">
-                  <span
-                    aria-hidden
-                    className={`size-1.5 rounded-full ${p.dot}`}
-                  />
-                  <span className={`text-label ${p.tone}`}>{p.label}</span>
-                </div>
-                <p className="text-sm leading-6 text-text-secondary">
+              <div key={p.label} className="gf-card">
+                <span className="gf-label">// {p.label.toUpperCase()}</span>
+                <p className="gf-body-sm" style={{ marginTop: 12 }}>
                   {p.body}
                 </p>
-              </GlassCard>
+              </div>
             ))}
           </div>
-        </Container>
-      </Section>
+        </div>
+      </section>
     </>
   );
 }

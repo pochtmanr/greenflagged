@@ -3,7 +3,6 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Input, Textarea } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
 type Phase = "idle" | "submitting" | "done";
 
@@ -42,11 +41,16 @@ export function ContactForm() {
 
   if (phase === "done") {
     return (
-      <div className="glass-strong p-8">
-        <h3 className="text-2xl font-bold uppercase tracking-[-0.02em] text-green-300">
-          Got it.
+      <div className="gf-frame">
+        <span className="gf-frame-bl" />
+        <span className="gf-frame-br" />
+        <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
+          // GOT IT
+        </span>
+        <h3 className="gf-h3" style={{ marginTop: 12 }}>
+          Message sent.
         </h3>
-        <p className="mt-3 text-sm leading-6 text-text-secondary">
+        <p className="gf-body-sm" style={{ marginTop: 12 }}>
           Thanks — we&apos;ll get back to you within one business day.
         </p>
       </div>
@@ -54,48 +58,63 @@ export function ContactForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      <Input
-        required
-        placeholder="Your name"
-        value={form.name}
-        onChange={onChange("name")}
-      />
-      <Input
-        required
-        type="email"
-        placeholder="you@work.com"
-        value={form.email}
-        onChange={onChange("email")}
-      />
-      <Textarea
-        required
-        placeholder="What do you need? (min 10 characters)"
-        value={form.message}
-        onChange={onChange("message")}
-      />
+    <form
+      onSubmit={onSubmit}
+      className="gf-frame"
+      style={{ display: "flex", flexDirection: "column", gap: 16 }}
+    >
+      <span className="gf-frame-bl" />
+      <span className="gf-frame-br" />
+      <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <span className="gf-label">// NAME</span>
+        <Input
+          required
+          placeholder="Your name"
+          value={form.name}
+          onChange={onChange("name")}
+        />
+      </label>
+      <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <span className="gf-label">// EMAIL</span>
+        <Input
+          required
+          type="email"
+          placeholder="you@work.com"
+          value={form.email}
+          onChange={onChange("email")}
+        />
+      </label>
+      <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <span className="gf-label">// MESSAGE</span>
+        <Textarea
+          required
+          placeholder="What do you need? (min 10 characters)"
+          value={form.message}
+          onChange={onChange("message")}
+        />
+      </label>
       {error ? (
-        <p className="text-xs text-[var(--severity-red)]">{error}</p>
+        <p className="gf-mono-sm" style={{ color: "var(--sev-red)" }}>
+          {error}
+        </p>
       ) : null}
-      <Button
+      <button
         type="submit"
-        variant="light"
-        size="lg"
+        className="gf-btn"
         disabled={phase === "submitting"}
-        className="self-start"
+        style={{ alignSelf: "flex-start" }}
       >
         {phase === "submitting" ? (
           <>
-            <Loader2 className="size-4 animate-spin" />
+            <Loader2 width={14} height={14} className="animate-spin" />
             Sending…
           </>
         ) : (
           <>
-            Send message
-            <span aria-hidden className="btn-arrow transition-transform">→</span>
+            Send message <span className="arrow">→</span>
           </>
         )}
-      </Button>
+      </button>
     </form>
   );
 }

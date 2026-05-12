@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import { Container } from "@/components/layout/container";
-import { Section } from "@/components/layout/section";
-import { ThreeStep } from "@/components/sections/three-step";
-import { ClauseGrid } from "@/components/sections/clause-grid";
-import { GlassCard } from "@/components/ui/glass-card";
+import { ThreeStep } from "@/components/marketing/three-step";
+import { ClauseGrid } from "@/components/marketing/clause-grid";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -14,50 +11,56 @@ export const metadata: Metadata = {
 export default function HowItWorksPage() {
   return (
     <>
-      <Section pad="lg">
-        <Container>
-          <div className="max-w-3xl">
-            <span className="text-label text-green-300">How it works</span>
-            <h1 className="mt-4 text-display-sm font-bold uppercase leading-[0.95] tracking-[-0.03em]">
-              From PDF to verdict<br />
-              <span className="text-green-300">in under two minutes.</span>
+      <section className="section" style={{ paddingTop: 144 }}>
+        <div className="container">
+          <div style={{ maxWidth: 760 }}>
+            <span className="gf-label">// HOW IT WORKS</span>
+            <h1 className="gf-h1" style={{ marginTop: 14 }}>
+              From PDF to verdict
+              <br />
+              <span style={{ color: "var(--green-500)" }}>
+                in under two minutes.
+              </span>
             </h1>
-            <p className="mt-6 text-base leading-7 text-text-secondary">
+            <p className="gf-body" style={{ marginTop: 24, fontSize: 17 }}>
               The same eight risk dimensions a senior contracts lawyer checks.
-              The same four-color severity scale. Just faster, in plain
-              English, and without the hourly bill.
+              The same four-color severity scale. Just faster, in plain English,
+              and without the hourly bill.
             </p>
           </div>
-        </Container>
-      </Section>
+        </div>
+      </section>
 
       <ThreeStep />
       <ClauseGrid />
 
-      <Section pad="lg" eyebrow="What we don't do">
-        <Container>
-          <GlassCard padded="lg" className="max-w-3xl gap-6">
-            <h2 className="text-2xl font-bold uppercase tracking-[-0.02em]">
+      <section className="section">
+        <div className="container">
+          <div className="gf-frame" style={{ maxWidth: 760 }}>
+            <span className="gf-frame-bl" />
+            <span className="gf-frame-br" />
+            <span className="gf-label">// what we don&apos;t do</span>
+            <h2 className="gf-h2" style={{ marginTop: 16 }}>
               Not a substitute for a lawyer.
             </h2>
-            <p className="text-sm leading-6 text-text-secondary">
+            <p className="gf-body" style={{ marginTop: 16 }}>
               Green Flagged is informational. It does not create an
               attorney-client relationship. It cannot represent you, file
               anything on your behalf, or advise on jurisdiction-specific case
-              law. Treat every verdict as a strong first read, then take it to
-              a licensed attorney for any decision that matters — a deal worth
+              law. Treat every verdict as a strong first read, then take it to a
+              licensed attorney for any decision that matters — a deal worth
               more than a few weeks of your time, a contract with personal
-              liability, or anything involving equity or IP transfer to a
-              party you don&apos;t know.
+              liability, or anything involving equity or IP transfer to a party
+              you don&apos;t know.
             </p>
-            <p className="text-sm leading-6 text-text-secondary">
+            <p className="gf-body" style={{ marginTop: 16 }}>
               The AI also makes mistakes. We flag low-confidence findings
-              explicitly, but you should always sanity-check the verdict
-              against your own reading of the contract.
+              explicitly, but you should always sanity-check the verdict against
+              your own reading of the contract.
             </p>
-          </GlassCard>
-        </Container>
-      </Section>
+          </div>
+        </div>
+      </section>
     </>
   );
 }

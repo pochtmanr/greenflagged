@@ -1,7 +1,4 @@
 import * as React from "react";
-import { Container } from "@/components/layout/container";
-import { Section } from "@/components/layout/section";
-import { GlassCard } from "@/components/ui/glass-card";
 
 type LegalPageProps = {
   title: string;
@@ -11,25 +8,42 @@ type LegalPageProps = {
 
 export function LegalPage({ title, updated, children }: LegalPageProps) {
   return (
-    <Section pad="lg">
-      <Container>
-        <div className="mx-auto max-w-3xl">
-          <span className="text-label text-green-300">Legal</span>
-          <h1 className="mt-4 text-display-sm font-bold uppercase leading-[0.95] tracking-[-0.03em]">
+    <section className="section" style={{ paddingTop: 144 }}>
+      <div className="container">
+        <div style={{ maxWidth: 768, marginInline: "auto" }}>
+          <span className="gf-label">// LEGAL</span>
+          <h1 className="gf-h1" style={{ marginTop: 14 }}>
             {title}
           </h1>
-          <p className="mt-4 text-xs text-text-secondary">Last updated: {updated}</p>
+          <p
+            className="gf-mono-sm"
+            style={{ marginTop: 14, color: "var(--fg-3)" }}
+          >
+            Last updated: {updated}
+          </p>
 
-          <GlassCard padded="lg" className="mt-12 gap-6 text-sm leading-7 text-text-secondary">
-            {children}
-          </GlassCard>
+          <div
+            className="gf-card"
+            style={{
+              marginTop: 48,
+              display: "flex",
+              flexDirection: "column",
+              gap: 20,
+              lineHeight: 1.7,
+            }}
+          >
+            <div className="legal-body">{children}</div>
+          </div>
 
-          <p className="mt-12 text-xs text-text-secondary">
+          <p
+            className="gf-mono-sm"
+            style={{ marginTop: 48, color: "var(--fg-3)" }}
+          >
             This is placeholder content for launch. Final wording is pending
             review by counsel. For questions: hello@greenflagged.app.
           </p>
         </div>
-      </Container>
-    </Section>
+      </div>
+    </section>
   );
 }
