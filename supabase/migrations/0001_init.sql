@@ -3,6 +3,12 @@ drop schema if exists public cascade;
 create schema public;
 grant usage on schema public to anon, authenticated, service_role;
 
+-- Restore Supabase default table-level privileges (drop schema wipes them).
+-- RLS still gates which rows each role can see; this just lets the role reach the table.
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+
 -- ===== profiles =====
 create table public.profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -119,3 +125,9 @@ create policy "own contract files insert" on storage.objects
   for insert with check (bucket_id = 'contracts' and auth.uid()::text = (storage.foldername(name))[1]);
 create policy "own contract files delete" on storage.objects
   for delete using (bucket_id = 'contracts' and auth.uid()::text = (storage.foldername(name))[1]);
+
+-- Belt-and-suspenders: grant on all already-created objects (in case default
+-- privileges weren't applied — e.g. when re-running parts of this migration).
+grant all on all tables in schema public to anon, authenticated, service_role;
+grant all on all sequences in schema public to anon, authenticated, service_role;
+grant all on all functions in schema public to anon, authenticated, service_role;

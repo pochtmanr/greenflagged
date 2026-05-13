@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { ProfileForm } from "@/components/settings/profile-form";
+import { DeleteAccount } from "@/components/settings/delete-account";
 import { SignOutButton } from "@/components/app/sign-out-button";
 
 export const metadata: Metadata = {
@@ -40,6 +41,7 @@ export default async function SettingsPage() {
             initialAccountType={profile?.account_type ?? "solo"}
             initialCountry={profile?.country_code ?? "US"}
             initialBusinessName={profile?.business_name ?? ""}
+            initialIndustries={profile?.industries ?? []}
           />
 
           <div className="gf-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -61,6 +63,8 @@ export default async function SettingsPage() {
               </SignOutButton>
             </div>
           </div>
+
+          <DeleteAccount />
         </div>
       </div>
     </section>

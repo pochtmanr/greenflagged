@@ -40,3 +40,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude code state / worktrees
+.claude/
+
+# instruction prompts (local context, not source)
+prompt*.md
+
+# design reference kits + loose root assets (use public/ for real assets)
+GreenFlagged Design System/
+OG image _ 1200 _ 630.png
+greenlogo.png
+greensvg.svg
+

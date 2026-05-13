@@ -4,6 +4,7 @@ import * as React from "react";
 import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { COUNTRIES, COUNTRY_CODES } from "@/lib/countries";
+import { INDUSTRIES } from "@/lib/industries";
 import {
   completeOnboarding,
   type OnboardingResult,
@@ -37,9 +38,12 @@ function detectLocaleCountry(): string {
   return "US";
 }
 
+type Step = 1 | 2 | 3 | 4;
+
 export function OnboardingWizard() {
-  const [step, setStep] = React.useState<1 | 2 | 3>(1);
+  const [step, setStep] = React.useState<Step>(1);
   const [accountType, setAccountType] = React.useState<AccountType | null>(null);
+  const [industries, setIndustries] = React.useState<string[]>([]);
   const [country, setCountry] = React.useState<string>("US");
   const [businessName, setBusinessName] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
@@ -50,11 +54,18 @@ export function OnboardingWizard() {
   }, []);
 
   const isBusiness = accountType === "business";
-  const lastStep: 2 | 3 = isBusiness ? 3 : 2;
+  const lastStep: 3 | 4 = isBusiness ? 4 : 3;
 
   const onPickType = (t: AccountType) => {
     setAccountType(t);
+    setError(null);
     setStep(2);
+  };
+
+  const toggleIndustry = (slug: string) => {
+    setIndustries((curr) =>
+      curr.includes(slug) ? curr.filter((s) => s !== slug) : [...curr, slug]
+    );
   };
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -64,11 +75,17 @@ export function OnboardingWizard() {
       setStep(1);
       return;
     }
+    if (industries.length === 0) {
+      setError("Pick at least one industry.");
+      setStep(2);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     const result: OnboardingResult = await completeOnboarding({
       account_type: accountType,
       country_code: country,
+      industries,
       business_name: isBusiness ? businessName : null,
     });
     if (result && !result.ok) {
@@ -136,13 +153,111 @@ export function OnboardingWizard() {
       {step === 2 ? (
         <form
           className="gf-frame"
-          onSubmit={isBusiness ? (e) => { e.preventDefault(); setStep(3); } : onSubmit}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (industries.length === 0) {
+              setError("Pick at least one industry.");
+              return;
+            }
+            setError(null);
+            setStep(3);
+          }}
           style={{ display: "flex", flexDirection: "column", gap: 24 }}
         >
           <span className="gf-frame-bl" />
           <span className="gf-frame-br" />
           <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
-            // 02 / WHERE
+            // 02 / INDUSTRIES
+          </span>
+          <h2 className="gf-h2">What industries do you work in?</h2>
+          <p className="gf-body-sm" style={{ color: "var(--fg-2)" }}>
+            Pick as many as apply — we use this to tune templates and redlines.
+          </p>
+          <div
+            role="group"
+            aria-label="Industries"
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
+            {INDUSTRIES.map((ind) => {
+              const active = industries.includes(ind.slug);
+              return (
+                <button
+                  key={ind.slug}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={active}
+                  onClick={() => toggleIndustry(ind.slug)}
+                  className="gf-tag"
+                  style={{
+                    cursor: "pointer",
+                    background: active ? "var(--ink-500)" : "transparent",
+                    color: active ? "var(--paper-0)" : "var(--fg-2)",
+                    borderColor: active ? "var(--ink-500)" : "var(--rule)",
+                  }}
+                >
+                  {ind.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {error ? (
+            <p className="gf-mono-sm" style={{ color: "var(--sev-red)" }}>
+              {error}
+            </p>
+          ) : null}
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 16,
+            }}
+          >
+            <button
+              type="button"
+              className="gf-btn-link"
+              onClick={() => {
+                setError(null);
+                setStep(1);
+              }}
+            >
+              ← Back
+            </button>
+            <button
+              type="submit"
+              className="gf-btn"
+              disabled={industries.length === 0}
+            >
+              Continue <span className="arrow">→</span>
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      {step === 3 ? (
+        <form
+          className="gf-frame"
+          onSubmit={
+            isBusiness
+              ? (e) => {
+                  e.preventDefault();
+                  setError(null);
+                  setStep(4);
+                }
+              : onSubmit
+          }
+          style={{ display: "flex", flexDirection: "column", gap: 24 }}
+        >
+          <span className="gf-frame-bl" />
+          <span className="gf-frame-br" />
+          <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
+            // 03 / WHERE
           </span>
           <h2 className="gf-h2">Where do you operate?</h2>
           <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -178,7 +293,7 @@ export function OnboardingWizard() {
             <button
               type="button"
               className="gf-btn-link"
-              onClick={() => setStep(1)}
+              onClick={() => setStep(2)}
             >
               ← Back
             </button>
@@ -206,7 +321,7 @@ export function OnboardingWizard() {
         </form>
       ) : null}
 
-      {step === 3 && isBusiness ? (
+      {step === 4 && isBusiness ? (
         <form
           className="gf-frame"
           onSubmit={onSubmit}
@@ -215,7 +330,7 @@ export function OnboardingWizard() {
           <span className="gf-frame-bl" />
           <span className="gf-frame-br" />
           <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
-            // 03 / BUSINESS
+            // 04 / BUSINESS
           </span>
           <h2 className="gf-h2">What&apos;s your business called?</h2>
           <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -248,7 +363,7 @@ export function OnboardingWizard() {
             <button
               type="button"
               className="gf-btn-link"
-              onClick={() => setStep(2)}
+              onClick={() => setStep(3)}
             >
               ← Back
             </button>

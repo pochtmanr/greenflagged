@@ -72,12 +72,7 @@ export function AppNav({ email }: Props) {
   return (
     <header className="nav nav--scrolled">
       <div className="nav__inner">
-        <Link
-          href="/dashboard"
-          style={{ textDecoration: "none", color: "inherit" }}
-        >
-          <Wordmark />
-        </Link>
+        <Wordmark href="/dashboard" />
         <nav className="nav__links">
           {LINKS.map(([label, href]) => (
             <Link

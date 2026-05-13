@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { COUNTRY_CODES } from "@/lib/countries";
+import { INDUSTRY_SLUGS } from "@/lib/industries";
 
 const Schema = z.object({
   account_type: z.enum(["solo", "freelancer", "business"]),
@@ -15,6 +16,13 @@ const Schema = z.object({
     })
     .transform((v) => v.toUpperCase()),
   business_name: z.string().trim().max(120).optional().nullable(),
+  industries: z
+    .array(z.string())
+    .min(1, { message: "Pick at least one industry" })
+    .max(INDUSTRY_SLUGS.size)
+    .refine((arr) => arr.every((s) => INDUSTRY_SLUGS.has(s)), {
+      message: "Unknown industry",
+    }),
 });
 
 export type OnboardingResult =
@@ -28,7 +36,7 @@ export async function completeOnboarding(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
-  const { account_type, country_code } = parsed.data;
+  const { account_type, country_code, industries } = parsed.data;
   const business_name =
     account_type === "business" ? parsed.data.business_name?.trim() || null : null;
 
@@ -50,6 +58,7 @@ export async function completeOnboarding(
       account_type,
       country_code,
       business_name,
+      industries,
       onboarded_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })

@@ -1,38 +1,33 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getSupabaseServer } from "@/lib/supabase/server";
+import { ContractWizard } from "@/components/contracts/contract-wizard";
 
 export const metadata: Metadata = {
   title: "New contract",
-  description: "Draft a new contract.",
+  description: "Draft a new contract with Green Flagged.",
   robots: { index: false, follow: false },
 };
 
-export default function NewContractPlaceholderPage() {
+export default async function NewContractPage() {
+  const supabase = await getSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/sign-in");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("business_name,country_code")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   return (
-    <section className="section" style={{ paddingTop: 64 }}>
-      <div className="container">
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 24,
-            maxWidth: 640,
-          }}
-        >
-          <span className="gf-label">// DRAFT</span>
-          <h1 className="gf-h1">Contract builder ships in Phase 2.</h1>
-          <div className="gf-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <p className="gf-body" style={{ color: "var(--fg-2)" }}>
-              The drafting flow — template picker, structured Q&amp;A,
-              AI-generated draft you can negotiate from — is up next. Your
-              account is provisioned and ready.
-            </p>
-            <Link href="/dashboard" className="gf-btn-link">
-              ← Back to dashboard
-            </Link>
-          </div>
-        </div>
-      </div>
-    </section>
+    <ContractWizard
+      defaults={{
+        provider_name: profile?.business_name ?? null,
+        provider_country: profile?.country_code ?? null,
+      }}
+    />
   );
 }

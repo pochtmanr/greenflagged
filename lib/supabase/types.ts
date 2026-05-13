@@ -25,6 +25,7 @@ export interface Database {
           account_type: AccountType | null;
           country_code: string | null;
           business_name: string | null;
+          industries: string[];
           onboarded_at: string | null;
           created_at: string;
           updated_at: string;
@@ -34,6 +35,7 @@ export interface Database {
           account_type?: AccountType | null;
           country_code?: string | null;
           business_name?: string | null;
+          industries?: string[];
           onboarded_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -43,6 +45,7 @@ export interface Database {
           account_type?: AccountType | null;
           country_code?: string | null;
           business_name?: string | null;
+          industries?: string[];
           onboarded_at?: string | null;
           created_at?: string;
           updated_at?: string;
