@@ -2,17 +2,30 @@
 
 import * as React from "react";
 
-type Phase = "idle" | "ready" | "done";
+type Phase = "idle" | "ready" | "submitting" | "done";
 type FileInfo = { name: string; size: string };
 
-export function DropZone() {
+export type DropZoneSubmitResult = "done" | "redirect" | void;
+
+export type DropZoneProps = {
+  /**
+   * Optional submit callback. Receives the chosen File; the marketing demo
+   * default just transitions to a fake "done" state. Phase 3 wires this to
+   * POST /api/scan and navigates to the verdict page.
+   */
+  onSubmit?: (file: File) => Promise<DropZoneSubmitResult> | DropZoneSubmitResult;
+};
+
+export function DropZone({ onSubmit }: DropZoneProps = {}) {
   const [file, setFile] = React.useState<FileInfo | null>(null);
+  const [rawFile, setRawFile] = React.useState<File | null>(null);
   const [drag, setDrag] = React.useState(false);
   const [phase, setPhase] = React.useState<Phase>("idle");
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const handle = (f: File | undefined | null) => {
     if (!f) return;
+    setRawFile(f);
     setFile({ name: f.name, size: (f.size / 1048576).toFixed(2) + " MB" });
     setPhase("ready");
   };
@@ -26,7 +39,21 @@ export function DropZone() {
     handle(e.dataTransfer.files?.[0]);
   };
 
-  const submit = () => setPhase("done");
+  const submit = async () => {
+    if (onSubmit && rawFile) {
+      setPhase("submitting");
+      try {
+        const result = await onSubmit(rawFile);
+        if (result === "redirect") return;
+        setPhase("done");
+      } catch {
+        // Leave the dropzone in "ready" so the user can retry.
+        setPhase("ready");
+      }
+      return;
+    }
+    setPhase("done");
+  };
 
   return (
     <div id="hero-drop" className="dropzone-wrap">
@@ -92,6 +119,7 @@ export function DropZone() {
           >
             {phase === "idle" && "WAITING FOR FILE"}
             {phase === "ready" && "READY · 0/12 PAGES SCANNED"}
+            {phase === "submitting" && "REVIEWING WITH AI…"}
             {phase === "done" && "GREEN-FLAGGED · 2 RED, 3 WARN, 5 NOTES"}
           </span>
         </div>
@@ -107,7 +135,11 @@ export function DropZone() {
           disabled={phase !== "ready"}
           onClick={submit}
         >
-          {phase === "done" ? "Scan complete" : "Run verdict"}{" "}
+          {phase === "done"
+            ? "Scan complete"
+            : phase === "submitting"
+            ? "Scanning…"
+            : "Run verdict"}{" "}
           <span className="arrow">→</span>
         </button>
       </div>

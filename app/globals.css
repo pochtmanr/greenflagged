@@ -633,6 +633,10 @@ button { font-family: inherit; }
   border-bottom: 1px solid var(--green-500);
 }
 
+/* === Scan result page === */
+.scan-result-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 24px; }
+@media (max-width: 980px) { .scan-result-grid { grid-template-columns: 1fr; gap: 20px; } }
+
 /* === Clause grid === */
 .clause-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 @media (max-width: 980px) { .clause-grid { grid-template-columns: repeat(2, 1fr); } }
