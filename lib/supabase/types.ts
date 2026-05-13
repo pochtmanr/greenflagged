@@ -82,6 +82,9 @@ export interface Database {
           verdict_severity: VerdictSeverity | null;
           created_at: string;
           retention_until: string | null;
+          style: Json;
+          business_profile_id: string | null;
+          source_contract_id: string | null;
         };
         Insert: {
           id?: string;
@@ -93,6 +96,9 @@ export interface Database {
           verdict_severity?: VerdictSeverity | null;
           created_at?: string;
           retention_until?: string | null;
+          style?: Json;
+          business_profile_id?: string | null;
+          source_contract_id?: string | null;
         };
         Update: {
           id?: string;
@@ -104,6 +110,72 @@ export interface Database {
           verdict_severity?: VerdictSeverity | null;
           created_at?: string;
           retention_until?: string | null;
+          style?: Json;
+          business_profile_id?: string | null;
+          source_contract_id?: string | null;
+        };
+        Relationships: [];
+      };
+      business_profiles: {
+        Row: {
+          id: string;
+          owner_id: string;
+          business_name: string | null;
+          first_name: string | null;
+          family_name: string | null;
+          logo_path: string | null;
+          is_default: boolean;
+          label: string | null;
+          created_at: string;
+          // Columns owned by Phase 5 — typed as optional here so this branch
+          // builds in isolation; Phase 5 will widen these to non-nullable
+          // where appropriate at merge time.
+          tax_id?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          website?: string | null;
+          country_code?: string | null;
+          city?: string | null;
+          street?: string | null;
+          postal_code?: string | null;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          business_name?: string | null;
+          first_name?: string | null;
+          family_name?: string | null;
+          logo_path?: string | null;
+          is_default?: boolean;
+          label?: string | null;
+          created_at?: string;
+          tax_id?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          website?: string | null;
+          country_code?: string | null;
+          city?: string | null;
+          street?: string | null;
+          postal_code?: string | null;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          business_name?: string | null;
+          first_name?: string | null;
+          family_name?: string | null;
+          logo_path?: string | null;
+          is_default?: boolean;
+          label?: string | null;
+          created_at?: string;
+          tax_id?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          website?: string | null;
+          country_code?: string | null;
+          city?: string | null;
+          street?: string | null;
+          postal_code?: string | null;
         };
         Relationships: [];
       };

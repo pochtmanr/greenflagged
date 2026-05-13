@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { loadBusinessProfile } from "@/lib/contracts/business";
+import { renderContractDocx } from "@/lib/docx/render";
 import { fetchLogo } from "@/lib/pdf/logo";
-import { renderContractPdf } from "@/lib/pdf/render-themed";
 import { coerceStyle } from "@/lib/pdf/themes";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
@@ -28,19 +28,17 @@ export async function GET(
     .select("id, title, style, business_profile_id")
     .eq("id", id)
     .maybeSingle();
-
   if (cErr || !contract) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   const { data: version, error: vErr } = await supabase
     .from("contract_versions")
-    .select("body_md, version")
+    .select("body_md")
     .eq("contract_id", id)
     .order("version", { ascending: false })
     .limit(1)
     .maybeSingle();
-
   if (vErr || !version?.body_md) {
     return NextResponse.json({ error: "No contract body" }, { status: 404 });
   }
@@ -52,30 +50,31 @@ export async function GET(
       ? await fetchLogo(supabase, business.logo_path)
       : null;
 
-  let pdf: Buffer;
+  let docx: Buffer;
   try {
-    pdf = await renderContractPdf({
+    docx = await renderContractDocx({
       body_md: version.body_md,
       title: contract.title ?? "Contract",
       style,
-      logo_data_url: logo?.dataUrl,
+      logo_buffer: logo?.buffer,
       business: business ?? undefined,
     });
   } catch (err) {
     return NextResponse.json(
       {
-        error: "Failed to render PDF",
+        error: "Failed to render DOCX",
         detail: err instanceof Error ? err.message : String(err),
       },
       { status: 500 },
     );
   }
 
-  const filename = sanitizeFilename(contract.title ?? "contract") + ".pdf";
-  return new NextResponse(new Uint8Array(pdf), {
+  const filename = sanitizeFilename(contract.title ?? "contract") + ".docx";
+  return new NextResponse(new Uint8Array(docx), {
     status: 200,
     headers: {
-      "Content-Type": "application/pdf",
+      "Content-Type":
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "Content-Disposition": `attachment; filename="${filename}"`,
       "Cache-Control": "private, no-store",
     },

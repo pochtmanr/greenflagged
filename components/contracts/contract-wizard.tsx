@@ -467,7 +467,7 @@ export function ContractWizard({ defaults }: Props) {
           throw new Error(data.error ?? `Save failed (${res.status})`);
         }
         const data = (await res.json()) as { contract_id: string };
-        router.push(`/contracts/${data.contract_id}`);
+        router.push(`/contracts/${data.contract_id}/edit`);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
         setSubmitting(false);

@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { CloneContractButton } from "@/components/contracts/clone-contract-button";
 import { VerdictView } from "@/components/contracts/verdict-view";
 import type { Redline, TaxonomyEntry } from "@/lib/ai/review";
 import { MarkdownPreview } from "@/lib/markdown/render-react";
+import { coerceStyle } from "@/lib/pdf/themes";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import type { VerdictSeverity } from "@/lib/supabase/types";
 
@@ -47,7 +49,7 @@ export default async function ContractPage({ params }: Props) {
   const { data: contract, error: contractError } = await supabase
     .from("contracts")
     .select(
-      "id,owner_id,kind,industry,title,verdict_severity,created_at,storage_path"
+      "id,owner_id,kind,industry,title,verdict_severity,created_at,storage_path,style",
     )
     .eq("id", id)
     .maybeSingle();
@@ -96,6 +98,15 @@ export default async function ContractPage({ params }: Props) {
 
   const latest = versions?.[0] ?? null;
   const versionCount = versions?.length ?? 0;
+  const style = coerceStyle(contract.style);
+  const styleTagParts: string[] = [
+    style.typography.toUpperCase(),
+    style.accent.toUpperCase(),
+    style.layout.replace("-", " ").toUpperCase(),
+    style.logo_placement === "none"
+      ? "NO LOGO"
+      : `${style.logo_placement.toUpperCase()} LOGO`,
+  ];
 
   return (
     <section className="section" style={{ paddingTop: 64 }}>
@@ -135,18 +146,48 @@ export default async function ContractPage({ params }: Props) {
                 {formatDate(contract.created_at)}
               </span>
             </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              {styleTagParts.map((part) => (
+                <span key={part} className="gf-tag">
+                  {part}
+                </span>
+              ))}
+            </div>
           </header>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <Link href={`/contracts/${contract.id}/edit`} className="gf-btn">
+              Edit <span className="arrow">→</span>
+            </Link>
             {latest?.body_md ? (
               <a
                 href={`/api/contracts/${contract.id}/pdf`}
-                className="gf-btn"
+                className="gf-btn-ghost"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Download PDF <span className="arrow">→</span>
+                Download PDF
               </a>
+            ) : null}
+            {latest?.body_md ? (
+              <a
+                href={`/api/contracts/${contract.id}/docx`}
+                className="gf-btn-ghost"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Download DOCX
+              </a>
+            ) : null}
+            {latest?.body_md ? (
+              <CloneContractButton contractId={contract.id} />
             ) : null}
             <Link href="/contracts/new" className="gf-btn-ghost">
               Create another
