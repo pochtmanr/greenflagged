@@ -103,8 +103,8 @@
   --border-ink:  1px solid var(--rule-strong);
 
   /* ---------- APP SHELL --------------------------------------------- */
-  --shell-max:     1600px;                    /* "9xl" interpretation */
-  --shell-pad-x:   clamp(24px, 4vw, 64px);
+  --shell-max:     1280px;                    /* Tailwind max-w-7xl, the SaaS standard */
+  --shell-pad-x:   clamp(20px, 3vw, 48px);
 }
 
 /* ---------- DARK THEME — explicit opt-in via data-theme --------- */
@@ -533,7 +533,7 @@ button { font-family: inherit; }
 @media (max-width: 720px) { .container { padding: 0 18px; } }
 
 /* App shell — in-app pages opt out of .container.
-   Capped at --shell-max (~1600px / "9xl"); gutters scale with viewport.
+   Capped at --shell-max (1280px / Tailwind 7xl); gutters scale with viewport.
    Every logged-in surface uses the same outer shell so page chrome
    (header, eyebrow, H1, nav) lines up between routes. Reading-width
    constraints live on the INNER content via .content--prose /
