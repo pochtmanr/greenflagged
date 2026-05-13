@@ -1086,6 +1086,128 @@ button { font-family: inherit; }
 }
 
 /* =============================================================
+   Wizard preview — split-pane (preview + style sidebar) + live
+   styled-markdown that approximates the PDF output.
+============================================================= */
+.wizard-preview__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 32px;
+  align-items: start;
+}
+@media (max-width: 980px) {
+  .wizard-preview__grid { grid-template-columns: 1fr !important; }
+  .wizard-preview__grid > aside { order: -1; position: static !important; }
+}
+.wizard-preview__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 96px;
+}
+
+/* The .doc-preview "paper" — light, hard-coded so it matches the PDF
+   look regardless of app theme. Uses CSS variables set inline by
+   <StyledMarkdown> so typography/accent updates feel instant. */
+.doc-preview {
+  background: #FBFAF6;
+  color: #0E110F;
+  padding: 56px;
+  border: 1px solid #D9D5C7;
+  font-family: var(--doc-font-body, "Helvetica", Arial, sans-serif);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 600px;
+}
+.doc-preview .doc-preview__body { font-family: inherit; }
+.doc-preview h1,
+.doc-preview h2,
+.doc-preview h3 {
+  font-family: var(--doc-font-heading);
+  color: var(--doc-accent, #4A7A5C);
+  letter-spacing: -0.01em;
+  margin: 0 0 12px;
+}
+.doc-preview h1 { font-size: 26px; font-weight: 700; }
+.doc-preview h2 { font-size: 18px; font-weight: 700; margin-top: 24px; }
+.doc-preview h3 { font-size: 15px; font-weight: 600; margin-top: 18px; }
+.doc-preview p { margin: 8px 0 12px; }
+.doc-preview strong { color: #0E110F; font-weight: 700; }
+.doc-preview ol,
+.doc-preview ul {
+  padding-left: 1.4em;
+  margin: 8px 0 12px;
+  line-height: 1.6;
+}
+.doc-preview hr {
+  border: none;
+  border-top: 1px dashed #D9D5C7;
+  margin: 24px 0;
+}
+.doc-preview a {
+  color: var(--doc-accent, #4A7A5C);
+  border-bottom: 1px solid currentColor;
+  text-decoration: none;
+}
+.doc-preview img.doc-logo {
+  max-height: 56px;
+  max-width: 220px;
+  display: block;
+  margin-bottom: 24px;
+}
+
+/* Layout variants */
+.doc-preview--layout-cover .doc-preview__cover {
+  text-align: center;
+  padding: 120px 0 64px;
+  border-bottom: 1px solid #D9D5C7;
+  margin-bottom: 24px;
+}
+.doc-preview--layout-cover .doc-preview__cover-title {
+  font-size: 36px;
+  font-weight: 700;
+  font-family: var(--doc-font-heading);
+  color: var(--doc-accent, #4A7A5C);
+  margin: 12px 0 8px;
+  letter-spacing: -0.02em;
+}
+.doc-preview--layout-cover .doc-preview__cover-sub {
+  font-family: var(--doc-font-body);
+  color: #4E4F45;
+  margin: 0;
+  font-size: 14px;
+}
+.doc-preview--layout-cover .doc-preview__cover img.doc-logo {
+  margin: 0 auto 24px;
+}
+.doc-preview--layout-two-column .doc-preview__body {
+  columns: 2;
+  column-gap: 32px;
+}
+.doc-preview--layout-two-column .doc-preview__body h2 { break-after: avoid; }
+.doc-preview--layout-two-column .doc-preview__body h1 {
+  column-span: all;
+}
+
+/* Logo placement variants */
+.doc-preview--logo-footer .doc-preview__footer {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px dashed #D9D5C7;
+}
+.doc-preview--logo-footer .doc-preview__footer img.doc-logo {
+  margin: 0 auto;
+}
+
+/* Tighter padding on small screens so the paper doesn't waste real estate. */
+@media (max-width: 640px) {
+  .doc-preview { padding: 28px; }
+  .doc-preview--layout-cover .doc-preview__cover { padding: 64px 0 32px; }
+  .doc-preview--layout-two-column .doc-preview__body { columns: 1; }
+}
+
+/* =============================================================
    Radix keyframes (still useful for in-app dialog/accordion)
 ============================================================= */
 @keyframes accordion-down { from { height: 0; } to { height: var(--radix-accordion-content-height); } }

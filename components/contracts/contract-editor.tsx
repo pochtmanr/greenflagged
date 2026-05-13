@@ -1,20 +1,14 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "tiptap-markdown";
-import type {
-  Accent,
-  ContractStyle,
-  Layout,
-  LogoPlacement,
-  Typography,
-} from "@/lib/pdf/themes";
+import type { ContractStyle } from "@/lib/pdf/themes";
+import { StyleSidebar } from "./style-sidebar";
 
 type ProfileOption = {
   id: string;
@@ -166,89 +160,13 @@ export function ContractEditor({
       </div>
 
       <aside className="contract-editor__sidebar">
-        <div className="gf-card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <span className="gf-label">// STYLE</span>
-          <StyleSection
-            label="Typography"
-            value={style.typography}
-            options={[
-              { value: "editorial", label: "Editorial" },
-              { value: "modern", label: "Modern" },
-              { value: "classic", label: "Classic" },
-            ]}
-            onChange={(v) => setStyle((s) => ({ ...s, typography: v as Typography }))}
-          />
-          <StyleSection
-            label="Color accent"
-            value={style.accent}
-            options={[
-              { value: "sage", label: "Sage" },
-              { value: "ink", label: "Ink" },
-              { value: "brand", label: "Brand" },
-            ]}
-            onChange={(v) => setStyle((s) => ({ ...s, accent: v as Accent }))}
-          />
-          {style.accent === "brand" ? (
-            <label className="contract-editor__field">
-              <span className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
-                Brand color
-              </span>
-              <input
-                type="color"
-                value={style.brand_color ?? "#4A7A5C"}
-                onChange={(e) =>
-                  setStyle((s) => ({ ...s, brand_color: e.target.value }))
-                }
-                className="contract-editor__color"
-              />
-            </label>
-          ) : null}
-          <StyleSection
-            label="Layout"
-            value={style.layout}
-            options={[
-              { value: "single", label: "Single" },
-              { value: "two-column", label: "Two-col" },
-              { value: "cover", label: "Cover" },
-            ]}
-            onChange={(v) => setStyle((s) => ({ ...s, layout: v as Layout }))}
-          />
-          <StyleSection
-            label="Logo placement"
-            value={style.logo_placement}
-            options={[
-              { value: "header", label: "Header" },
-              { value: "footer", label: "Footer" },
-              { value: "cover", label: "Cover" },
-              { value: "none", label: "None" },
-            ]}
-            onChange={(v) =>
-              setStyle((s) => ({ ...s, logo_placement: v as LogoPlacement }))
-            }
-          />
-        </div>
-
-        <div className="gf-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <span className="gf-label">// BUSINESS PROFILE</span>
-          <select
-            className="gf-input"
-            value={businessProfileId ?? ""}
-            onChange={(e) => setBusinessProfileId(e.target.value || null)}
-            style={{ appearance: "auto" }}
-          >
-            <option value="">— None —</option>
-            {profiles.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-                {p.is_default ? " · default" : ""}
-                {p.has_logo ? " · logo" : ""}
-              </option>
-            ))}
-          </select>
-          <Link href="/settings/business" className="gf-btn-link">
-            Manage profiles →
-          </Link>
-        </div>
+        <StyleSidebar
+          value={style}
+          onChange={setStyle}
+          profiles={profiles}
+          selectedProfileId={businessProfileId}
+          onProfileChange={setBusinessProfileId}
+        />
 
         <div className="gf-card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <button type="button" className="gf-btn" onClick={previewPdf}>
@@ -294,45 +212,6 @@ export function ContractEditor({
         </div>
       </aside>
       <EditorStyles />
-    </div>
-  );
-}
-
-type StyleSectionProps<T extends string> = {
-  label: string;
-  value: T;
-  options: { value: T; label: string }[];
-  onChange: (value: T) => void;
-};
-
-function StyleSection<T extends string>({
-  label,
-  value,
-  options,
-  onChange,
-}: StyleSectionProps<T>) {
-  return (
-    <div className="contract-editor__radio-group">
-      <span className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
-        {label}
-      </span>
-      <div className="contract-editor__radio-row">
-        {options.map((opt) => {
-          const isActive = opt.value === value;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              className={
-                "contract-editor__radio" + (isActive ? " is-active" : "")
-              }
-              onClick={() => onChange(opt.value)}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -525,46 +404,6 @@ function EditorStyles() {
         gap: 16px;
         position: sticky;
         top: 96px;
-      }
-      .contract-editor__radio-group { display: flex; flex-direction: column; gap: 6px; }
-      .contract-editor__radio-row {
-        display: flex;
-        gap: 4px;
-        flex-wrap: wrap;
-      }
-      .contract-editor__radio {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        padding: 6px 10px;
-        background: var(--surface);
-        border: 1px solid var(--rule);
-        color: var(--fg-2);
-        cursor: pointer;
-        transition: color 120ms, border-color 120ms, background 120ms;
-      }
-      .contract-editor__radio:hover {
-        color: var(--fg-1);
-        border-color: var(--rule-strong);
-      }
-      .contract-editor__radio.is-active {
-        color: var(--accent-strong);
-        border-color: var(--accent-strong);
-        background: var(--accent-tint);
-      }
-      .contract-editor__field {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        justify-content: space-between;
-      }
-      .contract-editor__color {
-        width: 32px;
-        height: 32px;
-        border: 1px solid var(--rule);
-        background: transparent;
-        padding: 0;
       }
     `}</style>
   );

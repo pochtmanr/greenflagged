@@ -12,6 +12,7 @@ import type {
 } from "@/lib/contracts/types";
 import { COUNTRIES } from "@/lib/countries";
 import { MarkdownPreview } from "@/lib/markdown/render-react";
+import { DEFAULT_STYLE, type ContractStyle } from "@/lib/pdf/themes";
 import { QuestionField } from "./question-field";
 import {
   ClientPicker,
@@ -21,6 +22,13 @@ import {
   BusinessProfilePicker,
   type SavedBusinessProfile,
 } from "./business-profile-picker";
+import { StyleSidebar, type StyleSidebarProfile } from "./style-sidebar";
+import { StyledMarkdown } from "./styled-markdown";
+
+export type StyleProfileOption = StyleSidebarProfile & {
+  business_name: string | null;
+  logo_signed_url: string | null;
+};
 
 type PickerOption = {
   id: string;
@@ -65,6 +73,7 @@ type Props = {
   defaults?: Defaults;
   clients?: SavedClient[];
   businessProfiles?: SavedBusinessProfile[];
+  styleProfiles?: StyleProfileOption[];
 };
 
 const CLIENT_STEPS = new Set([
@@ -169,6 +178,7 @@ export function ContractWizard({
   defaults,
   clients = [],
   businessProfiles = [],
+  styleProfiles = [],
 }: Props) {
   const router = useRouter();
   const [mode, setMode] = React.useState<Mode>({ kind: "picker" });
@@ -177,6 +187,19 @@ export function ContractWizard({
   const [submitting, setSubmitting] = React.useState(false);
   const [saveClient, setSaveClient] = React.useState(false);
   const [saveProvider, setSaveProvider] = React.useState(false);
+
+  // Phase 10 — style + business-profile selection lives in the wizard so
+  // it's baked into the contract at save time (no extra hop to the editor).
+  const defaultStyleProfileId =
+    styleProfiles.find((p) => p.is_default)?.id ??
+    styleProfiles[0]?.id ??
+    null;
+  const [chosenStyle, setChosenStyle] = React.useState<ContractStyle>(
+    DEFAULT_STYLE,
+  );
+  const [chosenProfileId, setChosenProfileId] = React.useState<string | null>(
+    defaultStyleProfileId,
+  );
 
   // custom-mode form state
   const [customIndustry, setCustomIndustry] = React.useState("");
@@ -625,6 +648,9 @@ export function ContractWizard({
 
   // ────────── PREVIEW ──────────
   if (mode.kind === "preview") {
+    const selectedProfile =
+      styleProfiles.find((p) => p.id === chosenProfileId) ?? null;
+
     const onSave = async () => {
       setSubmitting(true);
       setError(null);
@@ -636,6 +662,8 @@ export function ContractWizard({
             industry: mode.industry,
             body_md: mode.bodyMd,
             title: mode.title,
+            style: chosenStyle,
+            business_profile_id: chosenProfileId,
           }),
         });
         if (!res.ok) {
@@ -650,69 +678,87 @@ export function ContractWizard({
       }
     };
 
+    const onEditAnswers = () => {
+      if (mode.answers) {
+        const meta = INDUSTRY_META.find((m) => m.id === mode.industry);
+        if (meta) {
+          setAnswers(mode.answers);
+          setMode({ kind: "wizard", meta, step: 0 });
+          return;
+        }
+      }
+      setMode({ kind: "custom" });
+    };
+
     return (
       <section className="section" style={{ paddingTop: 64 }}>
         <div className="app-shell">
-          <div className="content--reading" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            <header style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
-                // PREVIEW
-              </span>
-              <h1 className="gf-h2" style={{ marginTop: 0 }}>
-                {mode.title}
-              </h1>
-              <p className="gf-body-sm" style={{ color: "var(--fg-3)" }}>
-                Review the draft. You can negotiate any clause — this is a
-                starting point, not the final word.
-              </p>
-            </header>
+          <div className="wizard-preview__grid">
+            <div style={{ display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
+              <header style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
+                  // PREVIEW
+                </span>
+                <h1 className="gf-h2" style={{ marginTop: 0 }}>
+                  {mode.title}
+                </h1>
+                <p className="gf-body-sm" style={{ color: "var(--fg-3)" }}>
+                  Pick the look on the right — the preview reflows live.
+                  Save once you&apos;re happy.
+                </p>
+              </header>
 
-            <div className="gf-card">
-              <MarkdownPreview source={mode.bodyMd} />
-            </div>
+              <StyledMarkdown
+                body_md={mode.bodyMd}
+                title={mode.title}
+                style={chosenStyle}
+                logoSrc={selectedProfile?.logo_signed_url ?? null}
+                businessName={selectedProfile?.business_name ?? null}
+              />
 
-            {error ? (
-              <p className="gf-mono-sm" style={{ color: "var(--sev-red)" }}>
-                {error}
-              </p>
-            ) : null}
+              {error ? (
+                <p className="gf-mono-sm" style={{ color: "var(--sev-red)" }}>
+                  {error}
+                </p>
+              ) : null}
 
-            <div
-              style={{
-                display: "flex",
-                gap: 16,
-                flexWrap: "wrap",
-                alignItems: "center",
-              }}
-            >
-              <button
-                type="button"
-                className="gf-btn"
-                onClick={onSave}
-                disabled={submitting}
-              >
-                {submitting ? "Saving…" : "Save & finish"}{" "}
-                <span className="arrow">→</span>
-              </button>
-              <button
-                type="button"
-                className="gf-btn-ghost"
-                onClick={() => {
-                  if (mode.answers) {
-                    const meta = INDUSTRY_META.find((m) => m.id === mode.industry);
-                    if (meta) {
-                      setAnswers(mode.answers);
-                      setMode({ kind: "wizard", meta, step: 0 });
-                      return;
-                    }
-                  }
-                  setMode({ kind: "custom" });
+              <div
+                style={{
+                  display: "flex",
+                  gap: 16,
+                  flexWrap: "wrap",
+                  alignItems: "center",
                 }}
-                disabled={submitting}
               >
-                ← Edit answers
-              </button>
+                <button
+                  type="button"
+                  className="gf-btn gf-btn-accent"
+                  onClick={onSave}
+                  disabled={submitting}
+                >
+                  {submitting ? "Saving…" : "Save & finish"}{" "}
+                  <span className="arrow">→</span>
+                </button>
+                <button
+                  type="button"
+                  className="gf-btn-ghost"
+                  onClick={onEditAnswers}
+                  disabled={submitting}
+                >
+                  ← Edit answers
+                </button>
+              </div>
             </div>
+
+            <aside className="wizard-preview__aside">
+              <StyleSidebar
+                value={chosenStyle}
+                onChange={setChosenStyle}
+                profiles={styleProfiles}
+                selectedProfileId={chosenProfileId}
+                onProfileChange={setChosenProfileId}
+              />
+            </aside>
           </div>
         </div>
         <WizardStyles />

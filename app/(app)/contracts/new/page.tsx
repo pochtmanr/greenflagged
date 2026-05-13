@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSupabaseServer } from "@/lib/supabase/server";
-import { ContractWizard } from "@/components/contracts/contract-wizard";
+import {
+  ContractWizard,
+  type StyleProfileOption,
+} from "@/components/contracts/contract-wizard";
 import type { SavedClient } from "@/components/contracts/client-picker";
 import type { SavedBusinessProfile } from "@/components/contracts/business-profile-picker";
 
@@ -38,14 +41,44 @@ export default async function NewContractPage() {
     sb
       .from("business_profiles")
       .select(
-        "id,first_name,family_name,business_name,label,country_code,city,street,postal_code,is_default",
+        "id,first_name,family_name,business_name,label,country_code,city,street,postal_code,is_default,logo_path",
       )
+      .order("is_default", { ascending: false })
       .order("created_at", { ascending: false }),
   ]);
 
   const clients = (clientsRes.data ?? []) as SavedClient[];
-  const profiles = (profilesRes.data ?? []) as SavedBusinessProfile[];
+  type ProfileRow = SavedBusinessProfile & { logo_path: string | null };
+  const profileRows = (profilesRes.data ?? []) as ProfileRow[];
+  const profiles = profileRows.map(({ logo_path: _logo, ...rest }) => rest) as SavedBusinessProfile[];
   const defaultProfile = profiles.find((p) => p.is_default) ?? null;
+
+  // Sign logo URLs so the wizard preview can render the business logo in-browser.
+  // Same bucket / path scheme as the editor + settings/business pages.
+  const styleProfiles: StyleProfileOption[] = await Promise.all(
+    profileRows.map(async (p): Promise<StyleProfileOption> => {
+      let logo_signed_url: string | null = null;
+      if (p.logo_path) {
+        const { data } = await supabase.storage
+          .from("contracts")
+          .createSignedUrl(p.logo_path, 60 * 30);
+        logo_signed_url = data?.signedUrl ?? null;
+      }
+      const personal = [p.first_name, p.family_name].filter(Boolean).join(" ").trim();
+      const label =
+        (p.label && p.label.trim()) ||
+        p.business_name ||
+        (personal.length > 0 ? personal : "Untitled profile");
+      return {
+        id: p.id,
+        label,
+        business_name: p.business_name ?? null,
+        has_logo: Boolean(p.logo_path),
+        is_default: Boolean(p.is_default),
+        logo_signed_url,
+      };
+    }),
+  );
 
   // Default precedence: a saved default business_profile wins over profiles.business_name.
   const defaults = defaultProfile
@@ -72,6 +105,7 @@ export default async function NewContractPage() {
       defaults={defaults}
       clients={clients}
       businessProfiles={profiles}
+      styleProfiles={styleProfiles}
     />
   );
 }

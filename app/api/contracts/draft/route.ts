@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getIndustry } from "@/lib/contracts";
 import { renderContractPdf } from "@/lib/pdf/render";
+import { isContractStyle, type ContractStyle } from "@/lib/pdf/themes";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import type { ContractIndustry } from "@/lib/supabase/types";
 
@@ -16,6 +17,8 @@ const BodySchema = z
     title: z.string().optional(),
     jurisdiction: z.string().optional(),
     description: z.string().optional(),
+    style: z.unknown().optional(),
+    business_profile_id: z.string().uuid().nullable().optional(),
   })
   .refine((b) => b.answers || b.body_md, {
     message: "Either answers or body_md is required",
@@ -80,6 +83,29 @@ export async function POST(req: Request) {
     industryColumn = schema.id;
   }
 
+  const style: ContractStyle | null = isContractStyle(payload.style)
+    ? payload.style
+    : null;
+  const businessProfileId: string | null = payload.business_profile_id ?? null;
+
+  // If a business_profile_id was provided, confirm it belongs to this user
+  // before persisting it on the contract. RLS would block the insert if it
+  // didn't, but failing fast gives a cleaner error.
+  if (businessProfileId) {
+    const { data: profileCheck } = await supabase
+      .from("business_profiles")
+      .select("id")
+      .eq("id", businessProfileId)
+      .eq("owner_id", user.id)
+      .maybeSingle();
+    if (!profileCheck) {
+      return NextResponse.json(
+        { error: "Unknown business profile" },
+        { status: 400 },
+      );
+    }
+  }
+
   const { data: contractRow, error: insertContractErr } = await supabase
     .from("contracts")
     .insert({
@@ -87,6 +113,8 @@ export async function POST(req: Request) {
       kind: "drafted",
       industry: industryColumn,
       title,
+      ...(style ? { style } : {}),
+      ...(businessProfileId ? { business_profile_id: businessProfileId } : {}),
     })
     .select("id")
     .single();
