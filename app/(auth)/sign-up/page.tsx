@@ -3,13 +3,13 @@ import { Suspense } from "react";
 import { SignInForm } from "@/components/sections/sign-in-form";
 
 export const metadata: Metadata = {
-  title: "Sign in",
+  title: "Create your account",
   description:
-    "Sign in to Green Flagged to access your verdicts, saved contracts, and billing.",
+    "Create your Green Flagged account to scan and draft contracts with AI redlines.",
   robots: { index: false, follow: false },
 };
 
-export default function SignInPage() {
+export default function SignUpPage() {
   return (
     <section className="section" style={{ paddingTop: 96 }}>
       <div className="container">
@@ -22,24 +22,24 @@ export default function SignInPage() {
           className="hero__grid"
         >
           <div className="hero__left">
-            <span className="gf-tag">SIGN IN · GREEN FLAGGED</span>
+            <span className="gf-tag">SIGN UP · GREEN FLAGGED</span>
             <h1 className="gf-h1">
-              Welcome back to{" "}
-              <span style={{ color: "var(--green-500)" }}>green-flagged</span>{" "}
-              contracts.
+              Start{" "}
+              <span style={{ color: "var(--green-500)" }}>green-flagging</span>{" "}
+              your contracts.
             </h1>
             <p className="hero__sub">
-              Sign in with Google or your email and password. New here? Create
-              an account in seconds — sign-up is right inside the form.
+              Free first scan, no credit card. Sign up with Google or email and
+              we&apos;ll get you to your dashboard in under a minute.
             </p>
             <ul className="hero__trust">
               <li>
                 <span className="trust-dot" />
-                Google OAuth + password sign-in
+                Free first scan
               </li>
               <li>
                 <span className="trust-dot" />
-                Single-device session, revoke any time
+                Cancel any time
               </li>
               <li>
                 <span className="trust-dot" />
@@ -49,7 +49,7 @@ export default function SignInPage() {
           </div>
           <div>
             <Suspense fallback={null}>
-              <SignInForm />
+              <SignInForm defaultMode="sign-up" />
             </Suspense>
           </div>
         </div>

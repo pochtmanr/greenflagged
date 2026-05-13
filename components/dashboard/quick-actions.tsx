@@ -1,0 +1,70 @@
+import Link from "next/link";
+
+type Action = {
+  href: string;
+  eyebrow: string;
+  title: string;
+  body: string;
+  cta: string;
+};
+
+const ACTIONS: Action[] = [
+  {
+    href: "/scan",
+    eyebrow: "// 01 / SCAN",
+    title: "Scan a contract",
+    body: "Drop a PDF or DOCX. Get the verdict, severity tags, and redlines in under a minute.",
+    cta: "Open scanner",
+  },
+  {
+    href: "/contracts/new",
+    eyebrow: "// 02 / DRAFT",
+    title: "Create a contract",
+    body: "Pick a clean template, answer a few questions, get a draft you can negotiate with.",
+    cta: "Start drafting",
+  },
+];
+
+export function QuickActions() {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+        gap: 24,
+      }}
+      className="dashboard__quick"
+    >
+      {ACTIONS.map((a) => (
+        <Link
+          key={a.href}
+          href={a.href}
+          className="gf-frame"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
+          <span className="gf-frame-bl" />
+          <span className="gf-frame-br" />
+          <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
+            {a.eyebrow}
+          </span>
+          <h3 className="gf-h3">{a.title}</h3>
+          <p className="gf-body-sm" style={{ color: "var(--fg-2)" }}>
+            {a.body}
+          </p>
+          <span
+            className="gf-mono-sm"
+            style={{ color: "var(--fg-1)", marginTop: "auto" }}
+          >
+            {a.cta} <span className="arrow">→</span>
+          </span>
+        </Link>
+      ))}
+    </div>
+  );
+}
