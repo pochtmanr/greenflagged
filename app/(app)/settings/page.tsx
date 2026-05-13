@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSupabaseServer } from "@/lib/supabase/server";
+import type { PlanId } from "@/lib/supabase/types";
+import { PLANS } from "@/lib/billing/plans";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { SignOutButton } from "@/components/app/sign-out-button";
 
@@ -17,11 +20,18 @@ export default async function SettingsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("user_id", user.id)
-    .single();
+  const [{ data: profile }, { data: sub }] = await Promise.all([
+    supabase.from("profiles").select("*").eq("user_id", user.id).single(),
+    supabase
+      .from("subscriptions")
+      .select("plan, status")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
+
+  const planId = (sub?.plan as PlanId | null) ?? "free";
+  const planLabel = PLANS[planId]?.label ?? "Free";
+  const status = sub?.status ?? "active";
 
   return (
     <section className="section" style={{ paddingTop: 64 }}>
@@ -43,11 +53,39 @@ export default async function SettingsPage() {
           />
 
           <div className="gf-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <h3 className="gf-h4">Billing</h3>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <h3 className="gf-h4" style={{ margin: 0 }}>
+                Billing
+              </h3>
+              <span
+                className={`gf-tag sev-${
+                  status === "past_due"
+                    ? "orange"
+                    : status === "canceled" || status === "expired"
+                      ? "yellow"
+                      : "green"
+                }`}
+              >
+                {planLabel.toUpperCase()}
+              </span>
+            </div>
             <p className="gf-body-sm" style={{ color: "var(--fg-3)" }}>
-              Billing controls ship in Phase 4. For now you&apos;re on the free
-              tier — 1 scan and 1 draft per month.
+              {planId === "free"
+                ? "You're on the free tier — 1 scan and 1 draft per month."
+                : `You're on the ${planLabel} plan.`}
             </p>
+            <div>
+              <Link href="/settings/billing" className="gf-btn gf-btn-ghost">
+                Manage billing <span className="arrow">→</span>
+              </Link>
+            </div>
           </div>
 
           <div className="gf-card" style={{ display: "flex", flexDirection: "column", gap: 12 }}>

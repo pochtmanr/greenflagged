@@ -6,8 +6,15 @@ import { ClauseGrid } from "@/components/marketing/clause-grid";
 import { Pricing } from "@/components/marketing/pricing";
 import { FAQ } from "@/components/marketing/faq";
 import { CTA } from "@/components/marketing/cta";
+import { getSupabaseServer } from "@/lib/supabase/server";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await getSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const signedIn = Boolean(user);
+
   return (
     <>
       <Hero />
@@ -15,7 +22,7 @@ export default function HomePage() {
       <ThreeStep />
       <SampleVerdict />
       <ClauseGrid />
-      <Pricing />
+      <Pricing signedIn={signedIn} />
       <FAQ />
       <CTA />
     </>

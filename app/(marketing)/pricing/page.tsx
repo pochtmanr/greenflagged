@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Pricing } from "@/components/marketing/pricing";
 import { FAQ } from "@/components/marketing/faq";
+import { getSupabaseServer } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -8,7 +9,12 @@ export const metadata: Metadata = {
     "Pay €9 once or subscribe for unlimited contract reviews from €15/month. Cancel any time.",
 };
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const supabase = await getSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const signedIn = Boolean(user);
   return (
     <>
       <section className="section" style={{ paddingTop: 144 }}>
@@ -28,7 +34,7 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <Pricing />
+      <Pricing signedIn={signedIn} />
 
       <section className="section--thin">
         <div className="container">
