@@ -16,6 +16,25 @@ export type ContractIndustry = "freelance" | "software" | "design" | "nda";
 export type VerdictSeverity = "green" | "yellow" | "orange" | "red";
 export type UsageEventKind = "scan" | "draft";
 
+export type PlanId =
+  | "free"
+  | "freelancer_monthly"
+  | "freelancer_yearly"
+  | "pro_monthly"
+  | "pro_yearly";
+export type SubscriptionStatus =
+  | "active"
+  | "trialing"
+  | "past_due"
+  | "canceled"
+  | "expired";
+export type CreditSource = "one_off_9eur" | "admin_grant";
+export type PaymentKind =
+  | "subscription_initial"
+  | "subscription_renewal"
+  | "one_off";
+export type PaymentStatus = "pending" | "succeeded" | "failed" | "refunded";
+
 export interface Database {
   public: {
     Tables: {
@@ -162,6 +181,114 @@ export interface Database {
           user_id?: string;
           kind?: UsageEventKind;
           contract_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      subscriptions: {
+        Row: {
+          user_id: string;
+          plan: PlanId;
+          status: SubscriptionStatus;
+          revolut_customer_id: string | null;
+          revolut_payment_method_id: string | null;
+          current_period_start: string | null;
+          current_period_end: string | null;
+          cancel_at_period_end: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          plan: PlanId;
+          status: SubscriptionStatus;
+          revolut_customer_id?: string | null;
+          revolut_payment_method_id?: string | null;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          plan?: PlanId;
+          status?: SubscriptionStatus;
+          revolut_customer_id?: string | null;
+          revolut_payment_method_id?: string | null;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      credits: {
+        Row: {
+          id: string;
+          user_id: string;
+          scans_remaining: number;
+          drafts_remaining: number;
+          expires_at: string;
+          source: CreditSource;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          scans_remaining?: number;
+          drafts_remaining?: number;
+          expires_at: string;
+          source: CreditSource;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          scans_remaining?: number;
+          drafts_remaining?: number;
+          expires_at?: string;
+          source?: CreditSource;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      payments: {
+        Row: {
+          id: string;
+          user_id: string;
+          revolut_order_id: string | null;
+          kind: PaymentKind;
+          plan: PlanId | null;
+          amount_cents: number;
+          currency: string;
+          status: PaymentStatus;
+          raw: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          revolut_order_id?: string | null;
+          kind: PaymentKind;
+          plan?: PlanId | null;
+          amount_cents: number;
+          currency?: string;
+          status: PaymentStatus;
+          raw?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          revolut_order_id?: string | null;
+          kind?: PaymentKind;
+          plan?: PlanId | null;
+          amount_cents?: number;
+          currency?: string;
+          status?: PaymentStatus;
+          raw?: Json | null;
           created_at?: string;
         };
         Relationships: [];

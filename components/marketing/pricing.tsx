@@ -15,6 +15,18 @@ type Tier = {
   feats: string[];
 };
 
+type Props = { signedIn?: boolean };
+
+// Map tier id + yearly toggle to the canonical PlanId expected by
+// /api/billing/checkout. one-off and the free tier don't have a yearly form.
+function planSlugFor(tierId: string, yearly: boolean): string {
+  if (tierId === "payg") return "one_off";
+  if (tierId === "freelancer")
+    return yearly ? "freelancer_yearly" : "freelancer_monthly";
+  if (tierId === "pro") return yearly ? "pro_yearly" : "pro_monthly";
+  return tierId;
+}
+
 const TIERS: Tier[] = [
   {
     id: "payg",
@@ -65,7 +77,7 @@ const TIERS: Tier[] = [
   },
 ];
 
-export function Pricing() {
+export function Pricing({ signedIn = false }: Props = {}) {
   const [yearly, setYearly] = React.useState(false);
 
   return (
@@ -122,7 +134,11 @@ export function Pricing() {
                   ))}
                 </ul>
                 <Link
-                  href={`/sign-in?plan=${t.id}`}
+                  href={
+                    signedIn
+                      ? "/settings/billing"
+                      : `/sign-up?intent=upgrade&plan=${planSlugFor(t.id, yearly)}`
+                  }
                   className={"gf-btn " + (t.hot ? "" : "gf-btn-ghost")}
                 >
                   {t.cta} <span className="arrow">→</span>
