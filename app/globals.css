@@ -487,6 +487,20 @@ button { font-family: inherit; }
 .container { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
 @media (max-width: 720px) { .container { padding: 0 18px; } }
 
+/* App shell — full-bleed in-app pages opt out of .container.
+   Width is fluid; gutters scale with viewport. Pages that want the
+   capped reading width compose .app-shell with .app-shell--narrow. */
+.app-shell {
+  width: 100%;
+  padding-left: clamp(16px, 3vw, 48px);
+  padding-right: clamp(16px, 3vw, 48px);
+}
+.app-shell--narrow {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .section { padding: 96px 0; position: relative; }
 .section--thin { padding: 48px 0; }
 .section--sunken { background: var(--surface-elev); }
@@ -839,6 +853,95 @@ button { font-family: inherit; }
   padding: 0;
 }
 .theme-toggle:hover { color: var(--fg-1); border-color: var(--rule-strong); }
+
+/* === Dropdown menu — paper card, hairline divider, mono items === */
+.gf-menu {
+  min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow-pop);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 2px;
+  z-index: 60;
+}
+.gf-menu__item {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 10px 12px;
+  color: var(--fg-2);
+  cursor: pointer;
+  outline: none;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 120ms ease, color 120ms ease;
+  text-decoration: none;
+}
+.gf-menu__item:hover,
+.gf-menu__item[data-highlighted] {
+  background: var(--surface-elev);
+  color: var(--fg-1);
+}
+.gf-menu__item[data-disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.gf-menu__item--danger {
+  color: var(--sev-red);
+}
+.gf-menu__item--danger:hover,
+.gf-menu__item--danger[data-highlighted] {
+  background: var(--sev-red-tint);
+  color: var(--sev-red);
+}
+.gf-menu__sep {
+  height: 1px;
+  background: var(--rule);
+  margin: 4px 0;
+  border: 0;
+}
+.gf-menu__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-4);
+  padding: 8px 12px 4px;
+}
+
+/* Row trigger — bare 28x28 button used inline in contract rows */
+.gf-row-action {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--fg-3);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  line-height: 1;
+}
+.gf-row-action:hover {
+  color: var(--fg-1);
+  border-color: var(--rule-strong);
+}
+.gf-row-action[data-state="open"] {
+  color: var(--fg-1);
+  border-color: var(--rule-strong);
+  background: var(--surface-elev);
+}
 
 /* =============================================================
    Radix keyframes (still useful for in-app dialog/accordion)
