@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { claude, MODELS } from "@/lib/ai/claude";
+import { complete } from "@/lib/ai/complete";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 const Body = z.object({
   text: z.string().min(1).max(4000),
   field_kind: z.enum(["scope", "deliverables"]),
+  model: z.string().optional(),
 });
 
 const SYSTEMS: Record<"scope" | "deliverables", string> = {
@@ -37,29 +38,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
 
-  const { text, field_kind } = parsed.data;
+  const { text, field_kind, model } = parsed.data;
 
   try {
-    const msg = await claude.messages.create({
-      model: MODELS.draft,
-      max_tokens: 1024,
-      system: [
-        {
-          type: "text",
-          text: SYSTEMS[field_kind],
-          cache_control: { type: "ephemeral" },
-        },
-      ],
-      messages: [{ role: "user", content: text }],
+    const out = await complete({
+      model,
+      system: SYSTEMS[field_kind],
+      user: text,
+      maxTokens: 1024,
     });
-    const block = msg.content[0];
-    if (!block || block.type !== "text") {
-      return NextResponse.json(
-        { error: "ai_response_invalid" },
-        { status: 502 },
-      );
-    }
-    return NextResponse.json({ improved: block.text.trim() });
+    return NextResponse.json({ improved: out.trim() });
   } catch (err) {
     const message = err instanceof Error ? err.message : "ai_error";
     return NextResponse.json({ error: message }, { status: 502 });

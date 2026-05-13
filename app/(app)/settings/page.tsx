@@ -39,7 +39,7 @@ export default async function SettingsPage() {
     <section className="section" style={{ paddingTop: 64 }}>
       <div className="app-shell">
         <SettingsNav current="profile" />
-        <div style={{ display: "flex", flexDirection: "column", gap: 32, maxWidth: 720, marginTop: 32 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 32, marginTop: 32 }}>
           <header style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <span className="gf-label">// SETTINGS</span>
             <h1 className="gf-h1">Your account</h1>

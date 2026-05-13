@@ -6,14 +6,16 @@ import { cn } from "@/lib/cn";
 /**
  * Button — GreenFlagged kit primitive.
  *
- *   variant="solid" → .gf-btn        (ink fill, paper text, sage hover)
- *   variant="ghost" → .gf-btn-ghost  (transparent, fg-1 border, inverts on hover)
- *   variant="link"  → .gf-btn-link   (transparent, underlined mono caps)
+ *   variant="solid"  → .gf-btn               (ink fill, paper text, sage hover)
+ *   variant="accent" → .gf-btn .gf-btn-accent (sage fill, white text)
+ *   variant="ghost"  → .gf-btn-ghost         (transparent, fg-1 border, inverts on hover)
+ *   variant="link"   → .gf-btn-link          (transparent, underlined mono caps)
  */
 const buttonVariants = cva("", {
   variants: {
     variant: {
       solid: "gf-btn",
+      accent: "gf-btn gf-btn-accent",
       ghost: "gf-btn gf-btn-ghost",
       link: "gf-btn-link",
     },

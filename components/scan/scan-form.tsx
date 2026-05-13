@@ -2,8 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { MODEL_CATALOG } from "@/lib/ai/models";
 
 type Mode = "upload" | "paste";
+
+const MODEL_STORAGE_KEY = "gf.scan.model";
+const DEFAULT_MODEL_ID =
+  MODEL_CATALOG.find((m) => m.id === "gpt-5-mini")?.id ??
+  MODEL_CATALOG[0]?.id ??
+  "gpt-5-mini";
 type Phase =
   | { kind: "idle" }
   | { kind: "ready"; file: File }
@@ -14,10 +21,260 @@ type Phase =
 
 const ACCEPTED = ".pdf,.docx,.txt";
 
+const REVIEW_TICKER = [
+  "Reading the document end to end…",
+  "Checking IP ownership clauses…",
+  "Inspecting payment terms and kill fees…",
+  "Looking at termination and notice periods…",
+  "Spotting runaway liability and indemnity traps…",
+  "Reviewing confidentiality scope…",
+  "Hunting auto-renewal language…",
+  "Drafting plain-English redlines…",
+];
+
 function formatSize(bytes: number) {
   if (bytes >= 1_048_576) return (bytes / 1_048_576).toFixed(2) + " MB";
   if (bytes >= 1024) return (bytes / 1024).toFixed(1) + " KB";
   return bytes + " B";
+}
+
+function formatElapsed(ms: number) {
+  const total = Math.max(0, ms);
+  const mm = Math.floor(total / 60000);
+  const ss = Math.floor((total / 1000) % 60);
+  return `${mm.toString().padStart(2, "0")}:${ss.toString().padStart(2, "0")}`;
+}
+
+function ScanProgress({
+  phase,
+  mode,
+  modelLabel,
+  modelProvider,
+  fileName,
+}: {
+  phase: "parsing" | "reviewing";
+  mode: Mode;
+  modelLabel: string;
+  modelProvider: string;
+  fileName: string;
+}) {
+  const startRef = React.useRef<number>(0);
+  const [elapsed, setElapsed] = React.useState(0);
+
+  React.useEffect(() => {
+    startRef.current = performance.now();
+    const id = setInterval(() => {
+      setElapsed(performance.now() - startRef.current);
+    }, 200);
+    return () => clearInterval(id);
+  }, []);
+
+  const tickerIdx = Math.floor(elapsed / 2200) % REVIEW_TICKER.length;
+  const showExtract = mode === "upload";
+  const steps: { label: string; state: "done" | "active" | "pending" }[] = [];
+  if (showExtract) {
+    steps.push({
+      label: "Extract text from document",
+      state: phase === "parsing" ? "active" : "done",
+    });
+  }
+  steps.push({
+    label: `Review with ${modelLabel}`,
+    state: phase === "reviewing" ? "active" : "pending",
+  });
+  steps.push({
+    label: "Build verdict & redlines",
+    state: "pending",
+  });
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        border: "1px dashed var(--paper-400)",
+        borderRadius: 12,
+        padding: "32px 24px",
+        background:
+          "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(127,212,76,0.04) 100%)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 20,
+      }}
+    >
+      <style>{`
+        @keyframes gf-scan-bar {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(250%); }
+        }
+        @keyframes gf-scan-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.35; transform: scale(0.78); }
+        }
+        @keyframes gf-scan-spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span
+            aria-hidden
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              background: "var(--green-500)",
+              animation: "gf-scan-pulse 1.1s ease-in-out infinite",
+              boxShadow: "0 0 0 4px rgba(127,212,76,0.18)",
+            }}
+          />
+          <span className="gf-label">// scanning · {fileName}</span>
+        </div>
+        <span
+          className="gf-mono-sm"
+          style={{
+            color: "var(--fg-3)",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {formatElapsed(elapsed)} elapsed
+        </span>
+      </div>
+
+      <div
+        style={{
+          position: "relative",
+          height: 4,
+          borderRadius: 999,
+          background: "var(--paper-300, rgba(127,212,76,0.08))",
+          overflow: "hidden",
+        }}
+      >
+        <span
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "40%",
+            background:
+              "linear-gradient(90deg, rgba(127,212,76,0) 0%, var(--green-500) 50%, rgba(127,212,76,0) 100%)",
+            animation: "gf-scan-bar 1.4s ease-in-out infinite",
+          }}
+        />
+      </div>
+
+      <ul
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          padding: 0,
+          margin: 0,
+          listStyle: "none",
+        }}
+      >
+        {steps.map((step, i) => (
+          <li
+            key={i}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              color:
+                step.state === "pending" ? "var(--fg-4)" : "var(--fg-1)",
+            }}
+          >
+            <StepIcon state={step.state} />
+            <span className="gf-mono-sm">{step.label}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div
+        className="gf-mono-sm"
+        style={{
+          color: "var(--fg-3)",
+          minHeight: "1.4em",
+          transition: "opacity 0.3s",
+        }}
+      >
+        {phase === "parsing" ? "Reading file…" : REVIEW_TICKER[tickerIdx]}
+      </div>
+
+      <div
+        className="gf-mono-sm"
+        style={{
+          color: "var(--fg-4)",
+          borderTop: "1px dotted var(--paper-400)",
+          paddingTop: 12,
+        }}
+      >
+        Model: {modelLabel} · {modelProvider} · Verdict will open
+        automatically when ready.
+      </div>
+    </div>
+  );
+}
+
+function StepIcon({ state }: { state: "done" | "active" | "pending" }) {
+  if (state === "done") {
+    return (
+      <span
+        aria-hidden
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 18,
+          height: 18,
+          borderRadius: "50%",
+          background: "var(--green-500)",
+          color: "var(--paper-0, #fff)",
+          fontSize: 11,
+          lineHeight: 1,
+          fontWeight: 700,
+        }}
+      >
+        ✓
+      </span>
+    );
+  }
+  if (state === "active") {
+    return (
+      <span
+        aria-hidden
+        style={{
+          display: "inline-block",
+          width: 18,
+          height: 18,
+          borderRadius: "50%",
+          border: "2px solid var(--paper-400)",
+          borderTopColor: "var(--green-500)",
+          animation: "gf-scan-spin 0.9s linear infinite",
+        }}
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden
+      style={{
+        display: "inline-block",
+        width: 18,
+        height: 18,
+        borderRadius: "50%",
+        border: "1px dashed var(--paper-400)",
+      }}
+    />
+  );
 }
 
 export function ScanForm() {
@@ -26,7 +283,20 @@ export function ScanForm() {
   const [phase, setPhase] = React.useState<Phase>({ kind: "idle" });
   const [drag, setDrag] = React.useState(false);
   const [pasted, setPasted] = React.useState("");
+  const [model, setModel] = React.useState<string>(DEFAULT_MODEL_ID);
   const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    const saved = window.localStorage.getItem(MODEL_STORAGE_KEY);
+    if (saved && MODEL_CATALOG.some((m) => m.id === saved)) {
+      setModel(saved);
+    }
+  }, []);
+
+  function pickModel(id: string) {
+    setModel(id);
+    window.localStorage.setItem(MODEL_STORAGE_KEY, id);
+  }
 
   const busy = phase.kind === "parsing" || phase.kind === "reviewing";
   const canSubmit =
@@ -54,6 +324,7 @@ export function ScanForm() {
       if (mode === "upload" && phase.kind === "ready") {
         const form = new FormData();
         form.append("file", phase.file);
+        form.append("model", model);
         setPhase({ kind: "parsing" });
         res = await fetch("/api/scan", { method: "POST", body: form });
       } else {
@@ -61,7 +332,7 @@ export function ScanForm() {
         res = await fetch("/api/scan", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text: pasted }),
+          body: JSON.stringify({ text: pasted, model }),
         });
       }
 
@@ -117,6 +388,9 @@ export function ScanForm() {
       ? `${pasted.length.toLocaleString()} chars`
       : "—";
 
+  const selectedModel =
+    MODEL_CATALOG.find((m) => m.id === model) ?? MODEL_CATALOG[0];
+
   return (
     <div className="dropzone-wrap">
       <div className="dropzone__head">
@@ -160,7 +434,15 @@ export function ScanForm() {
         </div>
       </div>
 
-      {mode === "upload" ? (
+      {busy ? (
+        <ScanProgress
+          phase={phase.kind as "parsing" | "reviewing"}
+          mode={mode}
+          modelLabel={selectedModel?.label ?? model}
+          modelProvider={selectedModel?.provider ?? "openai"}
+          fileName={fileName}
+        />
+      ) : mode === "upload" ? (
         <label
           onDragOver={(e) => {
             e.preventDefault();
@@ -174,7 +456,6 @@ export function ScanForm() {
             pickFile(e.dataTransfer.files?.[0]);
           }}
           className={"dropzone " + (drag ? "dropzone--drag" : "")}
-          style={busy ? { cursor: "wait", opacity: 0.7 } : undefined}
         >
           <span className="dropzone__bl" />
           <span className="dropzone__br" />
@@ -184,7 +465,6 @@ export function ScanForm() {
             accept={ACCEPTED}
             onChange={(e) => pickFile(e.target.files?.[0])}
             style={{ display: "none" }}
-            disabled={busy}
           />
           <div className="dropzone__glyph">↑</div>
           <div className="dropzone__title">
@@ -205,30 +485,31 @@ export function ScanForm() {
           rows={18}
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
-          disabled={busy}
           style={{ minHeight: 320 }}
         />
       )}
 
-      <div className="dropzone__specs">
-        <div className="gf-specrow">
-          <span className="key">SOURCE</span>
-          <span className="dots" />
-          <span className="val">{fileName}</span>
+      {busy ? null : (
+        <div className="dropzone__specs">
+          <div className="gf-specrow">
+            <span className="key">SOURCE</span>
+            <span className="dots" />
+            <span className="val">{fileName}</span>
+          </div>
+          <div className="gf-specrow">
+            <span className="key">SIZE</span>
+            <span className="dots" />
+            <span className="val">{fileSize}</span>
+          </div>
+          <div className="gf-specrow" style={{ borderBottom: "none" }}>
+            <span className="key">STATUS</span>
+            <span className="dots" />
+            <span className="val" style={{ color: statusColor }}>
+              {status}
+            </span>
+          </div>
         </div>
-        <div className="gf-specrow">
-          <span className="key">SIZE</span>
-          <span className="dots" />
-          <span className="val">{fileSize}</span>
-        </div>
-        <div className="gf-specrow" style={{ borderBottom: "none" }}>
-          <span className="key">STATUS</span>
-          <span className="dots" />
-          <span className="val" style={{ color: statusColor }}>
-            {status}
-          </span>
-        </div>
-      </div>
+      )}
 
       {phase.kind === "error" ? (
         <div
@@ -243,10 +524,49 @@ export function ScanForm() {
         </div>
       ) : null}
 
-      <div className="dropzone__cta">
-        <span className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
-          Verdict in under 30 seconds. Private to your account.
-        </span>
+      <div
+        className="dropzone__cta"
+        style={{ flexWrap: "wrap", gap: 12, rowGap: 12 }}
+      >
+        <label
+          className="gf-mono-sm"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            color: "var(--fg-3)",
+          }}
+        >
+          <span style={{ whiteSpace: "nowrap" }}>MODEL</span>
+          <select
+            value={model}
+            onChange={(e) => pickModel(e.target.value)}
+            disabled={busy}
+            aria-label="AI model"
+            style={{
+              background: "transparent",
+              color: "var(--fg-1)",
+              border: "1px solid var(--paper-400)",
+              borderRadius: 6,
+              padding: "4px 8px",
+              fontFamily: "inherit",
+              fontSize: "inherit",
+              cursor: busy ? "wait" : "pointer",
+            }}
+          >
+            {MODEL_CATALOG.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+                {m.hint ? ` — ${m.hint}` : ""}
+              </option>
+            ))}
+          </select>
+          {selectedModel ? (
+            <span style={{ color: "var(--fg-4)" }}>
+              · {selectedModel.provider}
+            </span>
+          ) : null}
+        </label>
         <button
           type="button"
           className="gf-btn"

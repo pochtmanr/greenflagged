@@ -55,7 +55,6 @@ export default async function ClientsSettingsPage() {
             display: "flex",
             flexDirection: "column",
             gap: 32,
-            maxWidth: 880,
             marginTop: 32,
           }}
         >

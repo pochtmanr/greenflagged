@@ -32,6 +32,7 @@ async function readPayload(req: Request) {
   if (contentType.includes("multipart/form-data")) {
     const form = await req.formData();
     const file = form.get("file");
+    const model = typeof form.get("model") === "string" ? (form.get("model") as string) : null;
     if (!(file instanceof File)) {
       return { error: bad("Missing file in form data") };
     }
@@ -50,13 +51,14 @@ async function readPayload(req: Request) {
       text: extracted.text,
       truncated: extracted.truncated,
       bytesIn: extracted.bytesIn,
+      model,
     };
   }
 
   if (contentType.includes("application/json")) {
-    let body: { text?: unknown };
+    let body: { text?: unknown; model?: unknown };
     try {
-      body = (await req.json()) as { text?: unknown };
+      body = (await req.json()) as { text?: unknown; model?: unknown };
     } catch {
       return { error: bad("Invalid JSON body") };
     }
@@ -65,12 +67,14 @@ async function readPayload(req: Request) {
     if (raw.length > MAX_PASTED_CHARS) {
       return { error: bad("Pasted text is too long", 413) };
     }
+    const model = typeof body.model === "string" ? body.model : null;
     const extracted = truncate(raw);
     return {
       file: null,
       text: extracted.text,
       truncated: extracted.truncated,
       bytesIn: extracted.bytesIn,
+      model,
     };
   }
 
@@ -90,7 +94,7 @@ export async function POST(req: Request) {
   const payload = await readPayload(req);
   if ("error" in payload) return payload.error;
 
-  const { file, text, truncated } = payload;
+  const { file, text, truncated, model } = payload;
   if (!text.trim()) {
     return bad("No readable text found in the contract", 422);
   }
@@ -139,7 +143,7 @@ export async function POST(req: Request) {
 
   let result;
   try {
-    result = await reviewContract(text);
+    result = await reviewContract(text, model ?? undefined);
   } catch (err) {
     if (storagePath) {
       await supabase.storage.from("contracts").remove([storagePath]);

@@ -210,8 +210,8 @@ export function ContractWizard({
   if (mode.kind === "picker") {
     return (
       <section className="section" style={{ paddingTop: 64 }}>
-        <div className="container">
-          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+        <div className="app-shell">
+          <div className="content--reading" style={{ display: "flex", flexDirection: "column", gap: 32 }}>
             <header style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <span className="gf-label">// NEW CONTRACT</span>
               <h1 className="gf-h1">Pick a starting point.</h1>
@@ -336,8 +336,8 @@ export function ContractWizard({
 
     return (
       <section className="section" style={{ paddingTop: 64 }}>
-        <div className="container">
-          <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 720 }}>
+        <div className="app-shell">
+          <div className="content--prose" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             <header style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
                 {meta.eyebrow}
@@ -464,13 +464,13 @@ export function ContractWizard({
 
     return (
       <section className="section" style={{ paddingTop: 64 }}>
-        <div className="container">
+        <div className="app-shell">
           <div
+            className="content--prose"
             style={{
               display: "flex",
               flexDirection: "column",
               gap: 24,
-              maxWidth: 720,
             }}
           >
             <header style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -652,8 +652,8 @@ export function ContractWizard({
 
     return (
       <section className="section" style={{ paddingTop: 64 }}>
-        <div className="container">
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <div className="app-shell">
+          <div className="content--reading" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             <header style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
                 // PREVIEW
@@ -667,7 +667,7 @@ export function ContractWizard({
               </p>
             </header>
 
-            <div className="gf-card" style={{ maxWidth: 880 }}>
+            <div className="gf-card">
               <MarkdownPreview source={mode.bodyMd} />
             </div>
 
@@ -935,8 +935,8 @@ function StreamingPanel({
 
   return (
     <section className="section" style={{ paddingTop: 64 }}>
-      <div className="container">
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div className="app-shell">
+        <div className="content--reading" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <header style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
               // AI DRAFT
@@ -961,7 +961,7 @@ function StreamingPanel({
               </button>
             </div>
           ) : (
-            <div className="gf-card" style={{ maxWidth: 880 }}>
+            <div className="gf-card">
               {accumulated ? (
                 <MarkdownPreview source={accumulated} />
               ) : (

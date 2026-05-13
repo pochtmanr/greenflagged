@@ -74,7 +74,6 @@ export default async function BusinessSettingsPage() {
             display: "flex",
             flexDirection: "column",
             gap: 32,
-            maxWidth: 880,
             marginTop: 32,
           }}
         >

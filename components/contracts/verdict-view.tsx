@@ -50,14 +50,12 @@ export function VerdictView({
 
   return (
     <section className="section" style={{ paddingTop: 64 }}>
-      <div className="container">
+      <div className="app-shell">
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             gap: 32,
-            maxWidth: 1180,
-            margin: "0 auto",
           }}
         >
           <header

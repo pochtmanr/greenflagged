@@ -19,6 +19,7 @@ export function SettingsNav({ current }: { current: SettingsTab }) {
   return (
     <nav
       aria-label="Settings sections"
+      className="settings__nav"
       style={{
         display: "flex",
         gap: 6,

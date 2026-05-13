@@ -1,5 +1,5 @@
 import type { VerdictSeverity } from "@/lib/supabase/types";
-import { claude, MODELS } from "./claude";
+import { complete } from "./complete";
 
 const SYSTEM_REVIEW = `You are a contract reviewer for Green Flagged. The user
 is a freelancer or small business owner who may sign this contract. Be candid
@@ -71,17 +71,18 @@ const REVIEW_KEYS = [
   "exclusivity",
 ] as const;
 
-export async function reviewContract(text: string): Promise<ReviewResult> {
+export async function reviewContract(
+  text: string,
+  modelId?: string,
+): Promise<ReviewResult> {
   const trimmed = text.trim();
   if (!trimmed) throw new Error("Contract text is empty");
 
-  const first = await callModel(trimmed);
+  const first = await callModel(trimmed, modelId);
   const parsed = tryParse(first);
   if (parsed) return validate(parsed);
 
-  // Retry once with an explicit JSON-only instruction. Sonnet rarely needs this,
-  // but it's cheap insurance and keeps the route from 500-ing on a bad token.
-  const retry = await callModel(trimmed, true);
+  const retry = await callModel(trimmed, modelId, true);
   const reparsed = tryParse(retry);
   if (!reparsed) {
     throw new Error("AI response was not valid JSON after retry");
@@ -89,29 +90,22 @@ export async function reviewContract(text: string): Promise<ReviewResult> {
   return validate(reparsed);
 }
 
-async function callModel(text: string, strictRetry = false): Promise<string> {
+async function callModel(
+  text: string,
+  modelId?: string,
+  strictRetry = false,
+): Promise<string> {
   const userContent = strictRetry
     ? `Your previous response was not valid JSON. Return ONLY a valid JSON object matching the schema in the system prompt — no commentary, no code fences.\n\nContract:\n${text}`
     : text;
 
-  const msg = await claude.messages.create({
-    model: MODELS.review,
-    max_tokens: 4096,
-    system: [
-      {
-        type: "text",
-        text: SYSTEM_REVIEW,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: [{ role: "user", content: userContent }],
+  return complete({
+    model: modelId,
+    system: SYSTEM_REVIEW,
+    user: userContent,
+    maxTokens: 4096,
+    json: true,
   });
-
-  const block = msg.content[0];
-  if (!block || block.type !== "text") {
-    throw new Error("Unexpected Anthropic response: no text block");
-  }
-  return block.text;
 }
 
 function tryParse(raw: string): unknown {

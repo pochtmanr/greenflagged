@@ -10,7 +10,7 @@ import { SignOutButton } from "@/components/app/sign-out-button";
 
 const LINKS: Array<[label: string, href: string]> = [
   ["Dashboard", "/dashboard"],
-  ["Contracts", "/dashboard"],
+  ["Contracts", "/contracts"],
   ["Settings", "/settings"],
 ];
 

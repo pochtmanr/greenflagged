@@ -110,7 +110,7 @@ export default async function ContractPage({ params }: Props) {
 
   return (
     <section className="section" style={{ paddingTop: 64 }}>
-      <div className="app-shell app-shell--narrow">
+      <div className="app-shell">
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           <Link
             href="/dashboard"
@@ -194,14 +194,16 @@ export default async function ContractPage({ params }: Props) {
             </Link>
           </div>
 
-          <div className="gf-card" style={{ maxWidth: 880 }}>
-            {latest?.body_md ? (
-              <MarkdownPreview source={latest.body_md} />
-            ) : (
-              <p className="gf-body-sm" style={{ color: "var(--fg-3)" }}>
-                This draft has no body yet.
-              </p>
-            )}
+          <div className="content--reading" style={{ width: "100%" }}>
+            <div className="gf-card">
+              {latest?.body_md ? (
+                <MarkdownPreview source={latest.body_md} />
+              ) : (
+                <p className="gf-body-sm" style={{ color: "var(--fg-3)" }}>
+                  This draft has no body yet.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>

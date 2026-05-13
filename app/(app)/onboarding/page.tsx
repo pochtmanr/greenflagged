@@ -25,14 +25,13 @@ export default async function OnboardingPage() {
 
   return (
     <section className="section" style={{ paddingTop: 64 }}>
-      <div className="container">
+      <div className="app-shell">
         <div
+          className="content--prose"
           style={{
             display: "grid",
             gridTemplateColumns: "1fr",
             gap: 32,
-            maxWidth: 640,
-            margin: "0 auto",
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

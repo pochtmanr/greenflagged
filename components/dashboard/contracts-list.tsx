@@ -7,13 +7,7 @@ import type {
   ContractKind,
   VerdictSeverity,
 } from "@/lib/supabase/types";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { ContractRowMenu } from "@/components/contracts/row-menu";
 
 type Row = {
   id: string;
@@ -22,8 +16,6 @@ type Row = {
   verdict_severity: VerdictSeverity | null;
   created_at: string;
 };
-
-type Filter = "all" | ContractKind;
 
 type Props = {
   contracts: Row[];
@@ -47,14 +39,11 @@ function formatDate(iso: string): string {
 
 export function ContractsList({ contracts }: Props) {
   const router = useRouter();
-  const [filter, setFilter] = React.useState<Filter>("all");
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
-  const filtered = React.useMemo(() => {
-    if (filter === "all") return contracts;
-    return contracts.filter((c) => c.kind === filter);
-  }, [contracts, filter]);
+  // Dashboard widget shows the 5 most-recent only — filter/sort moved to /contracts.
+  const visible = React.useMemo(() => contracts.slice(0, 5), [contracts]);
 
   const handleClone = async (id: string) => {
     setBusyId(id);
@@ -107,27 +96,13 @@ export function ContractsList({ contracts }: Props) {
         }}
       >
         <h3 className="gf-h4">My contracts</h3>
-        <div style={{ display: "flex", gap: 8 }}>
-          {(["all", "scanned", "drafted"] as Filter[]).map((f) => {
-            const active = filter === f;
-            return (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className="gf-tag"
-                style={{
-                  cursor: "pointer",
-                  background: active ? "var(--ink-500)" : "transparent",
-                  color: active ? "var(--paper-0)" : "var(--fg-2)",
-                  borderColor: active ? "var(--ink-500)" : "var(--rule)",
-                }}
-              >
-                {f === "all" ? "ALL" : f === "scanned" ? "SCANNED" : "DRAFTED"}
-              </button>
-            );
-          })}
-        </div>
+        <Link
+          href="/contracts"
+          className="gf-mono-sm"
+          style={{ color: "var(--fg-1)", textDecoration: "none" }}
+        >
+          View all <span className="arrow">→</span>
+        </Link>
       </div>
 
       {error ? (
@@ -136,11 +111,9 @@ export function ContractsList({ contracts }: Props) {
         </p>
       ) : null}
 
-      {filtered.length === 0 ? (
+      {visible.length === 0 ? (
         <p className="gf-body-sm" style={{ color: "var(--fg-3)" }}>
-          {contracts.length === 0
-            ? "No contracts yet — start with Scan or Create above."
-            : `No ${filter} contracts yet.`}
+          No contracts yet — start with Scan or Create above.
         </p>
       ) : (
         <ul
@@ -152,7 +125,7 @@ export function ContractsList({ contracts }: Props) {
             flexDirection: "column",
           }}
         >
-          {filtered.map((c, idx) => (
+          {visible.map((c, idx) => (
             <ContractRow
               key={c.id}
               row={c}
@@ -249,72 +222,12 @@ function ContractRow({
           </div>
         </Link>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label="Row actions"
-              className="gf-row-action"
-              onClick={(e) => e.stopPropagation()}
-              disabled={busy}
-            >
-              ⋮
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem asChild>
-              <Link href={`/contracts/${row.id}`}>Open</Link>
-            </DropdownMenuItem>
-            {row.kind === "drafted" ? (
-              <DropdownMenuItem asChild>
-                <Link href={`/contracts/${row.id}/edit`}>Edit</Link>
-              </DropdownMenuItem>
-            ) : null}
-            {row.kind === "drafted" ? (
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  onClone(row.id);
-                }}
-              >
-                Clone as template
-              </DropdownMenuItem>
-            ) : null}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <a
-                href={`/api/contracts/${row.id}/pdf`}
-                download
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Download PDF
-              </a>
-            </DropdownMenuItem>
-            {row.kind === "drafted" ? (
-              <DropdownMenuItem asChild>
-                <a
-                  href={`/api/contracts/${row.id}/docx`}
-                  download
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Download DOCX
-                </a>
-              </DropdownMenuItem>
-            ) : null}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              danger
-              onSelect={(e) => {
-                e.preventDefault();
-                onDelete(row.id, row.title);
-              }}
-            >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <ContractRowMenu
+          row={row}
+          busy={busy}
+          onClone={onClone}
+          onDelete={onDelete}
+        />
       </div>
     </li>
   );

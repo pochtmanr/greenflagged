@@ -12,14 +12,13 @@ export const metadata: Metadata = {
 export default function ScanPage() {
   return (
     <section className="section" style={{ paddingTop: 64 }}>
-      <div className="container">
+      <div className="app-shell">
         <div
+          className="content--prose"
           style={{
             display: "flex",
             flexDirection: "column",
             gap: 32,
-            maxWidth: 880,
-            margin: "0 auto",
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -27,7 +26,7 @@ export default function ScanPage() {
             <h1 className="gf-h1">Drop a contract. Get a verdict.</h1>
             <p
               className="gf-body"
-              style={{ color: "var(--fg-2)", maxWidth: 640 }}
+              style={{ color: "var(--fg-2)" }}
             >
               Upload a PDF or DOCX, or paste the text. Our reviewer checks
               for IP grabs, hostile termination, runaway liability, and the

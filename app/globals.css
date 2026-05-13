@@ -101,6 +101,10 @@
   --radius-full: 9999px;
   --border-hair: 1px solid var(--rule);
   --border-ink:  1px solid var(--rule-strong);
+
+  /* ---------- APP SHELL --------------------------------------------- */
+  --shell-max:     1600px;                    /* "9xl" interpretation */
+  --shell-pad-x:   clamp(24px, 4vw, 64px);
 }
 
 /* ---------- DARK THEME — explicit opt-in via data-theme --------- */
@@ -198,7 +202,13 @@
 =================================================================== */
 * { box-sizing: border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 html, body { background: var(--bg); color: var(--fg-1); }
-html { color-scheme: light dark; }
+html {
+  color-scheme: light dark;
+  /* Reserve gutter for the vertical scrollbar so short pages (e.g. /settings,
+     /settings/billing) don't render 15px wider than long pages — the fixed
+     nav and .app-shell would otherwise visibly shift between routes. */
+  scrollbar-gutter: stable;
+}
 body {
   font-family: var(--font-sans);
   font-size: var(--type-body);
@@ -315,11 +325,12 @@ button { font-family: inherit; }
 .gf-specrow {
   display: flex;
   align-items: baseline;
-  gap: var(--space-3);
+  justify-content: space-between;
+  gap: 16px;
   font-family: var(--font-mono);
   font-size: var(--type-mono);
-  padding: 8px 0;
-  border-bottom: 1px dotted var(--paper-400);
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--rule-soft);
 }
 .gf-specrow > .key {
   color: var(--fg-3);
@@ -328,13 +339,13 @@ button { font-family: inherit; }
   letter-spacing: 0.14em;
   flex: 0 0 auto;
 }
-.gf-specrow > .dots {
-  flex: 1 1 auto;
-  border-bottom: 1px dotted var(--paper-400);
-  align-self: center;
-  transform: translateY(-3px);
+/* Inline dot leader retired — kept in JSX as a kill switch. */
+.gf-specrow > .dots { display: none; }
+.gf-specrow > .val {
+  color: var(--fg-1);
+  text-align: right;
 }
-.gf-specrow > .val { color: var(--fg-1); }
+.gf-specrow:last-child { border-bottom: none; }
 
 .gf-frame {
   position: relative;
@@ -427,6 +438,40 @@ button { font-family: inherit; }
 }
 .gf-btn-link:hover { color: var(--green-700); }
 
+/* Accent — sage filled (used for primary CTAs that want color over ink) */
+.gf-btn-accent {
+  background: var(--accent);
+  color: #FFFFFF;
+  border-color: var(--accent);
+}
+.gf-btn-accent:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: #FFFFFF;
+}
+:root[data-theme="dark"] .gf-btn-accent {
+  background: var(--green-400);
+  color: var(--ink-500);
+  border-color: var(--green-400);
+}
+:root[data-theme="dark"] .gf-btn-accent:hover {
+  background: var(--green-300);
+  color: var(--ink-500);
+  border-color: var(--green-300);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .gf-btn-accent {
+    background: var(--green-400);
+    color: var(--ink-500);
+    border-color: var(--green-400);
+  }
+  :root:not([data-theme="light"]) .gf-btn-accent:hover {
+    background: var(--green-300);
+    color: var(--ink-500);
+    border-color: var(--green-300);
+  }
+}
+
 /* Inputs */
 .gf-input,
 .gf-textarea {
@@ -487,18 +532,34 @@ button { font-family: inherit; }
 .container { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
 @media (max-width: 720px) { .container { padding: 0 18px; } }
 
-/* App shell — full-bleed in-app pages opt out of .container.
-   Width is fluid; gutters scale with viewport. Pages that want the
-   capped reading width compose .app-shell with .app-shell--narrow. */
+/* App shell — in-app pages opt out of .container.
+   Capped at --shell-max (~1600px / "9xl"); gutters scale with viewport.
+   Every logged-in surface uses the same outer shell so page chrome
+   (header, eyebrow, H1, nav) lines up between routes. Reading-width
+   constraints live on the INNER content via .content--prose /
+   .content--reading — never on the shell itself. */
 .app-shell {
   width: 100%;
-  padding-left: clamp(16px, 3vw, 48px);
-  padding-right: clamp(16px, 3vw, 48px);
+  max-width: var(--shell-max);
+  margin-inline: auto;
+  padding-left: var(--shell-pad-x);
+  padding-right: var(--shell-pad-x);
 }
-.app-shell--narrow {
-  max-width: 1280px;
-  margin-left: auto;
-  margin-right: auto;
+/* Retired in Phase 9 — kept as a no-op so older code paths don't break.
+   Do not use on new surfaces; pick an inner .content--* utility instead. */
+.app-shell--narrow { /* deprecated: equivalent to .app-shell */ }
+
+/* Inner reading constraints — apply to <article>/<section>/<div> that
+   should stay legible (long-form prose, wizard step cards, etc.).
+   The outer .app-shell still spans the full 1600px so gutters and
+   page chrome stay aligned across routes. */
+.content--prose {
+  max-width: 760px;
+  margin-inline: auto;
+}
+.content--reading {
+  max-width: 960px;
+  margin-inline: auto;
 }
 
 .section { padding: 96px 0; position: relative; }
@@ -514,7 +575,7 @@ button { font-family: inherit; }
 /* === Nav === */
 .nav { position: fixed; inset: 0 0 auto; z-index: 40; transition: background 200ms, border-color 200ms; }
 .nav--scrolled { background: var(--bg); border-bottom: 1px solid var(--rule); }
-.nav__inner { max-width: 1280px; margin: 0 auto; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; gap: 24px; }
+.nav__inner { max-width: var(--shell-max); margin: 0 auto; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--shell-pad-x); gap: 24px; }
 .nav__links { display: flex; gap: 36px; }
 .nav__link {
   font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em;
@@ -562,7 +623,6 @@ button { font-family: inherit; }
   .nav__actions .nav__link { display: none; }
   .nav__actions .nav__cta { display: none; }
   .nav__mobile-toggle { display: inline-flex; }
-  .nav__inner { padding: 0 18px; }
 }
 @media (min-width: 761px) {
   .nav__mobile-panel { display: none !important; }
@@ -941,6 +1001,88 @@ button { font-family: inherit; }
   color: var(--fg-1);
   border-color: var(--rule-strong);
   background: var(--surface-elev);
+}
+
+/* =============================================================
+   App surfaces — mobile alignment + collapse rules (Phase 9)
+============================================================= */
+
+/* Dashboard quick-action cards — 2-col on desktop, 1-col on mobile. */
+.dashboard__quick {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+@media (max-width: 760px) {
+  .dashboard__quick {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Settings tab strip — vertical-ish rail on desktop, horizontal scroll on mobile. */
+@media (max-width: 760px) {
+  .settings__nav {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .settings__nav::-webkit-scrollbar { display: none; }
+  .settings__nav > a { white-space: nowrap; flex-shrink: 0; }
+}
+
+/* Contracts index table — fold-ins live in the markup but stay hidden on
+   desktop. On mobile (<= 760px), header row hides, the row becomes a
+   stacked card: title + action menu, then tags row, then meta row. */
+.contracts-table__row > .col-tags,
+.contracts-table__row > .col-meta { display: none; }
+
+@media (max-width: 760px) {
+  .contracts-table__head { display: none !important; }
+  .contracts-table__row {
+    grid-template-columns: 1fr auto !important;
+    grid-template-areas:
+      "title  menu"
+      "tags   tags"
+      "meta   meta" !important;
+    row-gap: 8px !important;
+    padding: 14px 12px !important;
+  }
+  .contracts-table__row > .col-title { grid-area: title; white-space: normal !important; }
+  .contracts-table__row > .col-menu  { grid-area: menu; }
+  .contracts-table__row > .col-tags {
+    grid-area: tags;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .contracts-table__row > .col-meta {
+    grid-area: meta;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    color: var(--fg-3);
+  }
+  /* Hide the desktop-only cells that have been folded into col-tags / col-meta. */
+  .contracts-table__row > .col-kind,
+  .contracts-table__row > .col-industry,
+  .contracts-table__row > .col-severity,
+  .contracts-table__row > .col-created { display: none !important; }
+}
+
+/* gf-specrow on very narrow screens — wrap so the value drops below
+   the key instead of overflowing the row. */
+@media (max-width: 480px) {
+  .gf-specrow {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .gf-specrow > .val {
+    width: 100%;
+    text-align: left;
+  }
 }
 
 /* =============================================================

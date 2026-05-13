@@ -6,6 +6,8 @@ type Action = {
   title: string;
   body: string;
   cta: string;
+  /** Which gf-btn variant to render the CTA span as. */
+  ctaVariant: "accent" | "ink";
 };
 
 const ACTIONS: Action[] = [
@@ -15,6 +17,7 @@ const ACTIONS: Action[] = [
     title: "Scan a contract",
     body: "Drop a PDF or DOCX. Get the verdict, severity tags, and redlines in under a minute.",
     cta: "Open scanner",
+    ctaVariant: "accent",
   },
   {
     href: "/contracts/new",
@@ -22,19 +25,13 @@ const ACTIONS: Action[] = [
     title: "Create a contract",
     body: "Pick a clean template, answer a few questions, get a draft you can negotiate with.",
     cta: "Start drafting",
+    ctaVariant: "ink",
   },
 ];
 
 export function QuickActions() {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-        gap: 24,
-      }}
-      className="dashboard__quick"
-    >
+    <div className="dashboard__quick">
       {ACTIONS.map((a) => (
         <Link
           key={a.href}
@@ -57,9 +54,17 @@ export function QuickActions() {
           <p className="gf-body-sm" style={{ color: "var(--fg-2)" }}>
             {a.body}
           </p>
+          {/*
+            Card itself is the <Link>, so the CTA renders as a styled span,
+            not an anchor — never nest anchors.
+          */}
           <span
-            className="gf-mono-sm"
-            style={{ color: "var(--fg-1)", marginTop: "auto" }}
+            className={
+              a.ctaVariant === "accent"
+                ? "gf-btn gf-btn-accent"
+                : "gf-btn"
+            }
+            style={{ marginTop: "auto", alignSelf: "flex-start" }}
           >
             {a.cta} <span className="arrow">→</span>
           </span>

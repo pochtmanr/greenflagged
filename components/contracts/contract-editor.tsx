@@ -424,12 +424,13 @@ function EditorStyles() {
     <style>{`
       .contract-editor__grid {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 300px;
+        grid-template-columns: minmax(0, 960px) 320px;
         gap: 32px;
         align-items: start;
       }
       @media (max-width: 980px) {
         .contract-editor__grid { grid-template-columns: 1fr; }
+        .contract-editor__sidebar { order: -1; position: static !important; }
       }
       .contract-editor__main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
       .contract-editor__title-row { display: flex; }
