@@ -5,6 +5,8 @@ import { QuickActions } from "@/components/dashboard/quick-actions";
 import { UsageMeter } from "@/components/dashboard/usage-meter";
 import { ContractsList } from "@/components/dashboard/contracts-list";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
+import { PLANS } from "@/lib/billing/plans";
+import type { PlanId } from "@/lib/supabase/types";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -35,8 +37,14 @@ export default async function DashboardPage() {
   monthStart.setUTCHours(0, 0, 0, 0);
   const monthStartIso = monthStart.toISOString();
 
-  const [profileRes, contractsRes, scanCountRes, draftCountRes, eventsRes] =
-    await Promise.all([
+  const [
+    profileRes,
+    contractsRes,
+    scanCountRes,
+    draftCountRes,
+    eventsRes,
+    subRes,
+  ] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user.id).single(),
       supabase
         .from("contracts")
@@ -62,6 +70,11 @@ export default async function DashboardPage() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(5),
+      supabase
+        .from("subscriptions")
+        .select("plan, status")
+        .eq("user_id", user.id)
+        .maybeSingle(),
     ]);
 
   const profile = profileRes.data;
@@ -70,12 +83,18 @@ export default async function DashboardPage() {
   const draftCount = draftCountRes.count ?? 0;
   const events = eventsRes.data ?? [];
 
+  const sub = subRes.data;
+  const isPaidStatus = sub?.status === "active" || sub?.status === "trialing";
+  const planId: PlanId =
+    (isPaidStatus ? (sub?.plan as PlanId) : "free") ?? "free";
+  const plan = PLANS[planId];
+
   const greetingName =
     profile?.business_name ?? firstNameFromEmail(user.email ?? null);
 
   return (
     <section className="section" style={{ paddingTop: 64 }}>
-      <div className="container">
+      <div className="app-shell">
         <div style={{ display: "flex", flexDirection: "column", gap: 48 }}>
           <header style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <span className="gf-label">// WELCOME, {greetingName.toUpperCase()}</span>
@@ -92,7 +111,13 @@ export default async function DashboardPage() {
             }}
             className="dashboard__grid"
           >
-            <UsageMeter scans={scanCount} drafts={draftCount} />
+            <UsageMeter
+              scans={scanCount}
+              drafts={draftCount}
+              scanLimit={plan.scans}
+              draftLimit={plan.drafts}
+              planLabel={`${plan.label} tier`}
+            />
             <ActivityFeed events={events} />
           </div>
 

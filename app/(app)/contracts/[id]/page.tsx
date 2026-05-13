@@ -110,7 +110,7 @@ export default async function ContractPage({ params }: Props) {
 
   return (
     <section className="section" style={{ paddingTop: 64 }}>
-      <div className="container">
+      <div className="app-shell app-shell--narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           <Link
             href="/dashboard"

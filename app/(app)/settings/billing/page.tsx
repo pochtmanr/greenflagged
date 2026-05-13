@@ -8,6 +8,7 @@ import { getQuota } from "@/lib/billing/quota";
 import { BillingActions } from "@/components/settings/billing-actions";
 import { BillingCheckoutClient } from "@/components/settings/billing-checkout";
 import { CancelSubscription } from "@/components/settings/cancel-subscription";
+import { SettingsNav } from "@/components/settings/settings-nav";
 
 export const metadata: Metadata = {
   title: "Billing",
@@ -161,13 +162,15 @@ export default async function BillingPage() {
 
   return (
     <section className="section" style={{ paddingTop: 64 }}>
-      <div className="container">
+      <div className="app-shell">
+        <SettingsNav current="billing" />
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             gap: 32,
             maxWidth: 880,
+            marginTop: 32,
           }}
         >
           <header
@@ -265,16 +268,18 @@ export default async function BillingPage() {
                 <span className="key">Scans</span>
                 <span className="dots" aria-hidden />
                 <span className="val">
-                  {quota.scans.used} /{" "}
-                  {quota.scans.unlimited ? "∞" : quota.scans.limit}
+                  {quota.scans.unlimited
+                    ? `${quota.scans.used} · Unlimited`
+                    : `${quota.scans.used} / ${quota.scans.limit}`}
                 </span>
               </div>
               <div className="gf-specrow">
                 <span className="key">Drafts</span>
                 <span className="dots" aria-hidden />
                 <span className="val">
-                  {quota.drafts.used} /{" "}
-                  {quota.drafts.unlimited ? "∞" : quota.drafts.limit}
+                  {quota.drafts.unlimited
+                    ? `${quota.drafts.used} · Unlimited`
+                    : `${quota.drafts.used} / ${quota.drafts.limit}`}
                 </span>
               </div>
               {quota.credits.scans + quota.credits.drafts > 0 ? (

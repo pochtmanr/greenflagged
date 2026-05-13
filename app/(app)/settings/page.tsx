@@ -6,6 +6,7 @@ import type { PlanId } from "@/lib/supabase/types";
 import { PLANS } from "@/lib/billing/plans";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { DeleteAccount } from "@/components/settings/delete-account";
+import { SettingsNav } from "@/components/settings/settings-nav";
 import { SignOutButton } from "@/components/app/sign-out-button";
 
 export const metadata: Metadata = {
@@ -36,8 +37,9 @@ export default async function SettingsPage() {
 
   return (
     <section className="section" style={{ paddingTop: 64 }}>
-      <div className="container">
-        <div style={{ display: "flex", flexDirection: "column", gap: 32, maxWidth: 720 }}>
+      <div className="app-shell">
+        <SettingsNav current="profile" />
+        <div style={{ display: "flex", flexDirection: "column", gap: 32, maxWidth: 720, marginTop: 32 }}>
           <header style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <span className="gf-label">// SETTINGS</span>
             <h1 className="gf-h1">Your account</h1>
@@ -80,7 +82,7 @@ export default async function SettingsPage() {
             </div>
             <p className="gf-body-sm" style={{ color: "var(--fg-3)" }}>
               {planId === "free"
-                ? "You're on the free tier — 1 scan and 1 draft per month."
+                ? "You're on the free tier — 1 scan per month, drafts are unlimited."
                 : `You're on the ${planLabel} plan.`}
             </p>
             <div>

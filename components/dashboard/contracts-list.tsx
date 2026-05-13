@@ -1,10 +1,19 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type {
   ContractKind,
   VerdictSeverity,
 } from "@/lib/supabase/types";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type Row = {
   id: string;
@@ -37,15 +46,57 @@ function formatDate(iso: string): string {
 }
 
 export function ContractsList({ contracts }: Props) {
+  const router = useRouter();
   const [filter, setFilter] = React.useState<Filter>("all");
+  const [busyId, setBusyId] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
 
   const filtered = React.useMemo(() => {
     if (filter === "all") return contracts;
     return contracts.filter((c) => c.kind === filter);
   }, [contracts, filter]);
 
+  const handleClone = async (id: string) => {
+    setBusyId(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/contracts/${id}/clone`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error ?? `Clone failed (${res.status})`);
+      }
+      const data = (await res.json()) as { contract_id: string };
+      router.push(`/contracts/${data.contract_id}/edit`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setBusyId(null);
+    }
+  };
+
+  const handleDelete = async (id: string, title: string | null) => {
+    const label = title ?? "this contract";
+    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;
+    setBusyId(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/contracts/${id}`, { method: "DELETE" });
+      if (!res.ok && res.status !== 204) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error ?? `Delete failed (${res.status})`);
+      }
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
-    <div className="gf-card" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div
+      className="gf-card"
+      style={{ display: "flex", flexDirection: "column", gap: 16 }}
+    >
       <div
         style={{
           display: "flex",
@@ -79,6 +130,12 @@ export function ContractsList({ contracts }: Props) {
         </div>
       </div>
 
+      {error ? (
+        <p className="gf-mono-sm" style={{ color: "var(--sev-red)" }}>
+          {error}
+        </p>
+      ) : null}
+
       {filtered.length === 0 ? (
         <p className="gf-body-sm" style={{ color: "var(--fg-3)" }}>
           {contracts.length === 0
@@ -96,56 +153,169 @@ export function ContractsList({ contracts }: Props) {
           }}
         >
           {filtered.map((c, idx) => (
-            <li
+            <ContractRow
               key={c.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 16,
-                padding: "12px 0",
-                borderTop:
-                  idx === 0 ? "none" : "1px solid var(--rule-soft, var(--rule))",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 4,
-                  minWidth: 0,
-                  flex: 1,
-                }}
-              >
-                <span
-                  className="gf-body-sm"
-                  style={{
-                    color: "var(--fg-1)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {c.title ?? "Untitled contract"}
-                </span>
-                <span className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
-                  {formatDate(c.created_at)}
-                </span>
-              </div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}
-              >
-                <span className="gf-tag">{c.kind.toUpperCase()}</span>
-                {c.verdict_severity ? (
-                  <span className={`gf-tag ${SEVERITY_TAG[c.verdict_severity]}`}>
-                    {c.verdict_severity.toUpperCase()}
-                  </span>
-                ) : null}
-              </div>
-            </li>
+              row={c}
+              first={idx === 0}
+              busy={busyId === c.id}
+              onClone={handleClone}
+              onDelete={handleDelete}
+            />
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+function ContractRow({
+  row,
+  first,
+  busy,
+  onClone,
+  onDelete,
+}: {
+  row: Row;
+  first: boolean;
+  busy: boolean;
+  onClone: (id: string) => void;
+  onDelete: (id: string, title: string | null) => void;
+}) {
+  return (
+    <li
+      style={{
+        borderTop: first ? "none" : "1px solid var(--rule-soft, var(--rule))",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          padding: "12px 0",
+        }}
+      >
+        <Link
+          href={`/contracts/${row.id}`}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+            flex: 1,
+            minWidth: 0,
+            color: "inherit",
+            textDecoration: "none",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+              minWidth: 0,
+              flex: 1,
+            }}
+          >
+            <span
+              className="gf-body-sm"
+              style={{
+                color: "var(--fg-1)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {row.title ?? "Untitled contract"}
+            </span>
+            <span className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
+              {formatDate(row.created_at)}
+            </span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexShrink: 0,
+            }}
+          >
+            <span className="gf-tag">{row.kind.toUpperCase()}</span>
+            {row.verdict_severity ? (
+              <span className={`gf-tag ${SEVERITY_TAG[row.verdict_severity]}`}>
+                {row.verdict_severity.toUpperCase()}
+              </span>
+            ) : null}
+          </div>
+        </Link>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Row actions"
+              className="gf-row-action"
+              onClick={(e) => e.stopPropagation()}
+              disabled={busy}
+            >
+              ⋮
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem asChild>
+              <Link href={`/contracts/${row.id}`}>Open</Link>
+            </DropdownMenuItem>
+            {row.kind === "drafted" ? (
+              <DropdownMenuItem asChild>
+                <Link href={`/contracts/${row.id}/edit`}>Edit</Link>
+              </DropdownMenuItem>
+            ) : null}
+            {row.kind === "drafted" ? (
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  onClone(row.id);
+                }}
+              >
+                Clone as template
+              </DropdownMenuItem>
+            ) : null}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a
+                href={`/api/contracts/${row.id}/pdf`}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Download PDF
+              </a>
+            </DropdownMenuItem>
+            {row.kind === "drafted" ? (
+              <DropdownMenuItem asChild>
+                <a
+                  href={`/api/contracts/${row.id}/docx`}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Download DOCX
+                </a>
+              </DropdownMenuItem>
+            ) : null}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              danger
+              onSelect={(e) => {
+                e.preventDefault();
+                onDelete(row.id, row.title);
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </li>
   );
 }

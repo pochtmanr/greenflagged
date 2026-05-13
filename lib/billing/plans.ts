@@ -22,7 +22,7 @@ export const PLANS: Record<PlanId, Plan> = {
     label: "Free",
     family: "free",
     scans: 1,
-    drafts: 1,
+    drafts: Number.POSITIVE_INFINITY,
     seats: 1,
     price_cents: 0,
     currency: "EUR",
