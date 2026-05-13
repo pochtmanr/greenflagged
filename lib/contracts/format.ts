@@ -1,4 +1,5 @@
 import { COUNTRIES } from "@/lib/countries";
+import type { NameValue, AddressValue } from "./types";
 
 export function formatDate(value: unknown): string {
   if (typeof value !== "string" || !value) return "*to be agreed*";
@@ -46,4 +47,31 @@ export function clauses(title: string, items: string[]): string {
 
 export function FOOTER(): string {
   return "---\n\n*This contract was drafted with AI assistance. Have a lawyer review for high-value engagements.*";
+}
+
+export function formatParty(name: unknown): string {
+  if (!name || typeof name !== "object") return fallback(null, "the party");
+  const n = name as NameValue;
+  const first = typeof n.first === "string" ? n.first.trim() : "";
+  const family = typeof n.family === "string" ? n.family.trim() : "";
+  const business = typeof n.business === "string" ? n.business.trim() : "";
+  const personal = [first, family].filter(Boolean).join(" ").trim();
+  if (business) {
+    return personal ? `${business} (represented by ${personal})` : business;
+  }
+  return personal || fallback(null, "the party");
+}
+
+export function formatAddress(addr: unknown): string {
+  if (!addr || typeof addr !== "object") return fallback(null, "address to be added");
+  const a = addr as AddressValue;
+  const street = typeof a.street === "string" ? a.street.trim() : "";
+  const postal = typeof a.postal === "string" ? a.postal.trim() : "";
+  const city = typeof a.city === "string" ? a.city.trim() : "";
+  const cityLine = [postal, city].filter(Boolean).join(" ").trim();
+  const country = a.country ? formatCountry(a.country) : "";
+  const parts = [street, cityLine, country].filter(
+    (s) => s && s !== "*to be agreed*",
+  );
+  return parts.length ? parts.join(", ") : fallback(null, "address to be added");
 }

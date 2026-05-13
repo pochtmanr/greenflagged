@@ -2,58 +2,66 @@ import type { z } from "zod";
 
 export type SelectOption = { value: string; label: string };
 
+type QuestionBase = {
+  id: string;
+  label: string;
+  help?: string;
+  tooltip?: string;
+  required?: boolean;
+};
+
 export type Question =
-  | {
-      id: string;
+  | (QuestionBase & {
       kind: "text";
-      label: string;
       placeholder?: string;
-      required?: boolean;
       multiline?: boolean;
-      help?: string;
-    }
-  | {
-      id: string;
+    })
+  | (QuestionBase & {
       kind: "select";
-      label: string;
       options: SelectOption[];
-      required?: boolean;
-      help?: string;
-    }
-  | {
-      id: string;
+    })
+  | (QuestionBase & {
       kind: "number";
-      label: string;
       min?: number;
       max?: number;
       step?: number;
       suffix?: string;
-      required?: boolean;
       defaultValue?: number;
-      help?: string;
-    }
-  | {
-      id: string;
+    })
+  | (QuestionBase & {
       kind: "date";
-      label: string;
-      required?: boolean;
-      help?: string;
-    }
-  | {
-      id: string;
+    })
+  | (QuestionBase & {
       kind: "toggle";
-      label: string;
       defaultValue?: boolean;
-      help?: string;
-    }
-  | {
-      id: string;
+    })
+  | (QuestionBase & {
       kind: "checkbox-group";
-      label: string;
       options: SelectOption[];
       defaultValue?: string[];
-      help?: string;
-    };
+    })
+  | (QuestionBase & {
+      kind: "name-group";
+      showBusiness?: boolean;
+      businessLabel?: string;
+    })
+  | (QuestionBase & {
+      kind: "address";
+    })
+  | (QuestionBase & {
+      kind: "improve-textarea";
+      field_kind: "scope" | "deliverables";
+      placeholder?: string;
+      minRows?: number;
+    });
+
+export type NameValue = { first?: string; family?: string; business?: string };
+export type AddressValue = {
+  country?: string;
+  city?: string;
+  street?: string;
+  postal?: string;
+};
 
 export type IndustryId = "freelance" | "software" | "design" | "nda";
 

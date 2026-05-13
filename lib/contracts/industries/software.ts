@@ -1,13 +1,15 @@
 import { z } from "zod";
-import { COUNTRIES } from "@/lib/countries";
+import { COUNTRIES, COUNTRY_CODES } from "@/lib/countries";
 import type { IndustrySchema, Question } from "../types";
 import {
   FOOTER,
   clauses,
   fallback,
+  formatAddress,
   formatCountry,
   formatCurrency,
   formatDate,
+  formatParty,
 } from "../format";
 
 const RATE_TYPE_LABEL: Record<string, string> = {
@@ -29,35 +31,64 @@ const INDEMNITY_LABEL: Record<string, string> = {
   uncapped: "uncapped (each Party retains full liability under applicable law)",
 };
 
+const TOOLTIP_IP_ASSIGNMENT =
+  "When ON: copyright + patent rights transfer to the client on payment. When OFF: client gets a license to use, you keep ownership. Choose based on whether you'll reuse the code in other projects.";
+const TOOLTIP_GOVERNING_LAW =
+  "The country (and by extension, court system) whose laws interpret this contract if you end up in dispute. Pick where the provider is based — easier to enforce locally. Cross-border disputes are expensive.";
+const TOOLTIP_INDEMNITY =
+  "The maximum amount you'd pay if you indemnify the client for a third-party claim (e.g. they get sued because your code infringed a patent). '1× fees' is the safest cap for freelancers. 'Unlimited' is dangerous — never accept without a lawyer.";
+const TOOLTIP_WARRANTY =
+  "Number of days after delivery during which you fix bugs at no charge. Standard: 30. Beyond that the client pays hourly.";
+const TOOLTIP_TERMINATION_NOTICE =
+  "How many days' written notice either party must give to end the contract. 14–30 days is typical. Shorter favors the client; longer favors the provider.";
+const TOOLTIP_PAYMENT_SCHEDULE =
+  "When the provider gets paid. 'Net 30' means within 30 days of invoice. 'Milestones' splits payment across deliverables. 'On completion' is risky for the provider — lots of money tied up.";
+
 export const softwareQuestions: Question[] = [
   {
-    id: "client_name",
-    kind: "text",
-    label: "Client legal name",
+    id: "client",
+    kind: "name-group",
+    label: "Client",
     required: true,
+    showBusiness: true,
   },
-  { id: "client_address", kind: "text", label: "Client address", multiline: true },
   {
-    id: "provider_name",
-    kind: "text",
-    label: "Your legal name (Provider)",
+    id: "client_address",
+    kind: "address",
+    label: "Client address",
     required: true,
   },
-  { id: "provider_address", kind: "text", label: "Your address", multiline: true },
+  {
+    id: "provider",
+    kind: "name-group",
+    label: "You (Provider)",
+    required: true,
+    showBusiness: true,
+  },
+  {
+    id: "provider_address",
+    kind: "address",
+    label: "Your address",
+    required: true,
+  },
   {
     id: "scope",
-    kind: "text",
+    kind: "improve-textarea",
+    field_kind: "scope",
     label: "Scope of work",
-    multiline: true,
     required: true,
+    minRows: 6,
     placeholder: "What software you will design, build, or maintain",
+    help: "Describe what you'll do. The Improve button polishes it into professional contract language.",
   },
   {
     id: "deliverables",
-    kind: "text",
+    kind: "improve-textarea",
+    field_kind: "deliverables",
     label: "Deliverables",
-    multiline: true,
+    minRows: 4,
     placeholder: "Source code, docs, environments, etc.",
+    help: "What concrete outputs the client receives. Improve will format it as a numbered list.",
   },
   {
     id: "rate_type",
@@ -70,12 +101,20 @@ export const softwareQuestions: Question[] = [
       { value: "retainer", label: "Monthly retainer" },
     ],
   },
-  { id: "rate_amount", kind: "number", label: "Rate amount", suffix: "€", min: 0, required: true },
+  {
+    id: "rate_amount",
+    kind: "number",
+    label: "Rate amount",
+    suffix: "€",
+    min: 0,
+    required: true,
+  },
   {
     id: "payment_schedule",
     kind: "select",
     label: "Payment schedule",
     required: true,
+    tooltip: TOOLTIP_PAYMENT_SCHEDULE,
     options: [
       { value: "on_completion", label: "On completion" },
       { value: "milestones", label: "Milestones" },
@@ -92,12 +131,14 @@ export const softwareQuestions: Question[] = [
     suffix: "days",
     defaultValue: 30,
     min: 0,
+    tooltip: TOOLTIP_WARRANTY,
   },
   {
     id: "ip_assignment",
     kind: "toggle",
     label: "Full IP assignment on payment? (off = perpetual licence)",
     defaultValue: true,
+    tooltip: TOOLTIP_IP_ASSIGNMENT,
   },
   {
     id: "oss_ack",
@@ -110,6 +151,7 @@ export const softwareQuestions: Question[] = [
     kind: "select",
     label: "Indemnity cap",
     required: true,
+    tooltip: TOOLTIP_INDEMNITY,
     options: [
       { value: "1x", label: "1× fees paid" },
       { value: "2x", label: "2× fees paid" },
@@ -123,21 +165,39 @@ export const softwareQuestions: Question[] = [
     suffix: "days",
     defaultValue: 14,
     min: 0,
+    tooltip: TOOLTIP_TERMINATION_NOTICE,
   },
   {
     id: "governing_law",
     kind: "select",
     label: "Governing law (country)",
     required: true,
+    tooltip: TOOLTIP_GOVERNING_LAW,
     options: COUNTRIES.map((c) => ({ value: c.code, label: c.name })),
   },
 ];
 
+const NameSchema = z.object({
+  first: z.string().trim().min(1),
+  family: z.string().trim().min(1),
+  business: z.string().trim().optional().default(""),
+});
+
+const AddressSchema = z.object({
+  country: z
+    .string()
+    .length(2)
+    .refine((c) => COUNTRY_CODES.has(c)),
+  city: z.string().trim().min(1),
+  street: z.string().trim().min(1),
+  postal: z.string().trim().min(1),
+});
+
 const validator = z.object({
-  client_name: z.string().trim().min(1),
-  client_address: z.string().trim().optional().default(""),
-  provider_name: z.string().trim().min(1),
-  provider_address: z.string().trim().optional().default(""),
+  client: NameSchema,
+  client_address: AddressSchema,
+  provider: NameSchema,
+  provider_address: AddressSchema,
   scope: z.string().trim().min(1),
   deliverables: z.string().trim().optional().default(""),
   rate_type: z.enum(["hourly", "fixed", "retainer"]),
@@ -157,18 +217,19 @@ type SoftwareAnswers = z.infer<typeof validator>;
 
 function render(raw: Record<string, unknown>): string {
   const a = validator.parse(raw) as SoftwareAnswers;
+  const clientParty = formatParty(a.client);
+  const clientAddr = formatAddress(a.client_address);
+  const providerParty = formatParty(a.provider);
+  const providerAddr = formatAddress(a.provider_address);
 
   const parties = clauses("Parties", [
-    `This Software Services Agreement is entered into between ${fallback(
-      a.client_name,
-      "Client legal name to be inserted"
-    )} ("Client"), at ${fallback(a.client_address, "Client address to be inserted")}, and ${fallback(a.provider_name, "Provider legal name to be inserted")} ("Provider"), at ${fallback(a.provider_address, "Provider address to be inserted")}.`,
+    `This Software Services Agreement is entered into between ${clientParty} ("Client"), at ${clientAddr}, and ${providerParty} ("Provider"), at ${providerAddr}.`,
   ]);
 
   const scope = clauses("Scope of Work", [
     `The Provider will design, build, and/or maintain software for the Client as follows: ${fallback(
       a.scope,
-      "scope to be agreed in writing"
+      "scope to be agreed in writing",
     )}.`,
     "Work will be performed using reasonable professional skill, current industry standards, and security best practices appropriate to the engagement.",
     "Material changes to scope must be agreed in writing and may affect fees and timeline.",
@@ -233,7 +294,7 @@ function render(raw: Record<string, unknown>): string {
   const termination = clauses("Termination", [
     `Either Party may terminate this Agreement on ${fallback(
       a.termination_notice,
-      "the agreed number of"
+      "the agreed number of",
     )} days' written notice for any reason.`,
     "Either Party may terminate immediately for material breach not cured within fourteen (14) days of written notice.",
     "On termination, the Client will pay for all work performed up to the termination date and the Provider will deliver work-in-progress in its current state.",
@@ -253,7 +314,7 @@ function render(raw: Record<string, unknown>): string {
 
   return [
     `# Software Services Agreement`,
-    `*Between ${a.client_name} and ${a.provider_name}*`,
+    `*Between ${clientParty} and ${providerParty}*`,
     parties,
     scope,
     deliverables,
@@ -273,7 +334,9 @@ function render(raw: Record<string, unknown>): string {
 function buildTitle(raw: Record<string, unknown>): string {
   const parsed = validator.safeParse(raw);
   if (!parsed.success) return "Software Services Agreement";
-  return `Software Agreement — ${parsed.data.client_name} & ${parsed.data.provider_name}`;
+  const c = formatParty(parsed.data.client);
+  const p = formatParty(parsed.data.provider);
+  return `Software Agreement — ${c} & ${p}`;
 }
 
 export const software: IndustrySchema = {

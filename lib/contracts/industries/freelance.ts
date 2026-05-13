@@ -1,13 +1,15 @@
 import { z } from "zod";
-import { COUNTRIES } from "@/lib/countries";
+import { COUNTRIES, COUNTRY_CODES } from "@/lib/countries";
 import type { IndustrySchema, Question } from "../types";
 import {
   FOOTER,
   clauses,
   fallback,
+  formatAddress,
   formatCountry,
   formatCurrency,
   formatDate,
+  formatParty,
 } from "../format";
 
 const RATE_TYPE_LABEL: Record<string, string> = {
@@ -32,48 +34,61 @@ const IP_LABEL: Record<string, string> = {
     "The Provider and Client jointly own the intellectual property in the deliverables, with each party free to use and exploit the work without further accounting.",
 };
 
+const TOOLTIP_IP =
+  "Who owns the work product once payment is made. 'Client owns on full payment' is the freelance norm: you keep rights until the invoice clears, then transfer them. 'Provider retains' means you license use but keep ownership — common for software where you'll reuse components. 'Shared' is rare and complicates resale.";
+const TOOLTIP_GOVERNING_LAW =
+  "The country (and by extension, court system) whose laws interpret this contract if you end up in dispute. Pick where the provider is based — easier to enforce locally. Cross-border disputes are expensive.";
+const TOOLTIP_TERMINATION_NOTICE =
+  "How many days' written notice either party must give to end the contract. 14–30 days is typical. Shorter favors the client; longer favors the provider.";
+const TOOLTIP_PAYMENT_SCHEDULE =
+  "When the provider gets paid. 'Net 30' means within 30 days of invoice. 'Milestones' splits payment across deliverables. 'On completion' is risky for the provider — lots of money tied up.";
+
 export const freelanceQuestions: Question[] = [
   {
-    id: "client_name",
-    kind: "text",
-    label: "Client legal name",
-    placeholder: "e.g. Acme GmbH",
+    id: "client",
+    kind: "name-group",
+    label: "Client",
     required: true,
+    showBusiness: true,
+    help: "The person or company you're working for. Add the business name if you're contracting with a company.",
   },
   {
     id: "client_address",
-    kind: "text",
+    kind: "address",
     label: "Client address",
-    multiline: true,
-    placeholder: "Street, city, country",
+    required: true,
   },
   {
-    id: "provider_name",
-    kind: "text",
-    label: "Your legal name",
-    placeholder: "e.g. Roman Pochtman",
+    id: "provider",
+    kind: "name-group",
+    label: "You (Provider)",
     required: true,
+    showBusiness: true,
   },
   {
     id: "provider_address",
-    kind: "text",
+    kind: "address",
     label: "Your address",
-    multiline: true,
+    required: true,
   },
   {
     id: "scope",
-    kind: "text",
+    kind: "improve-textarea",
+    field_kind: "scope",
     label: "Scope of work",
-    multiline: true,
     required: true,
+    minRows: 6,
     placeholder: "What you'll deliver, in plain language",
+    help: "Describe what you'll do. The Improve button polishes it into professional contract language.",
   },
   {
     id: "deliverables",
-    kind: "text",
+    kind: "improve-textarea",
+    field_kind: "deliverables",
     label: "Deliverables",
-    multiline: true,
+    minRows: 4,
     placeholder: "Specific outputs the Client will receive",
+    help: "What concrete outputs the client receives. Improve will format it as a numbered list.",
   },
   {
     id: "rate_type",
@@ -99,6 +114,7 @@ export const freelanceQuestions: Question[] = [
     kind: "select",
     label: "Payment schedule",
     required: true,
+    tooltip: TOOLTIP_PAYMENT_SCHEDULE,
     options: [
       { value: "on_completion", label: "On completion" },
       { value: "milestones", label: "Milestones" },
@@ -113,6 +129,7 @@ export const freelanceQuestions: Question[] = [
     kind: "select",
     label: "IP ownership",
     required: true,
+    tooltip: TOOLTIP_IP,
     options: [
       { value: "client_on_payment", label: "Client owns on full payment" },
       { value: "provider_retains", label: "Provider retains; Client licenses" },
@@ -126,21 +143,39 @@ export const freelanceQuestions: Question[] = [
     suffix: "days",
     defaultValue: 14,
     min: 0,
+    tooltip: TOOLTIP_TERMINATION_NOTICE,
   },
   {
     id: "governing_law",
     kind: "select",
     label: "Governing law (country)",
     required: true,
+    tooltip: TOOLTIP_GOVERNING_LAW,
     options: COUNTRIES.map((c) => ({ value: c.code, label: c.name })),
   },
 ];
 
+const NameSchema = z.object({
+  first: z.string().trim().min(1, "First name is required"),
+  family: z.string().trim().min(1, "Family name is required"),
+  business: z.string().trim().optional().default(""),
+});
+
+const AddressSchema = z.object({
+  country: z
+    .string()
+    .length(2)
+    .refine((c) => COUNTRY_CODES.has(c), { message: "Country is required" }),
+  city: z.string().trim().min(1, "City is required"),
+  street: z.string().trim().min(1, "Street is required"),
+  postal: z.string().trim().min(1, "Postal code is required"),
+});
+
 const validator = z.object({
-  client_name: z.string().trim().min(1, "Client name is required"),
-  client_address: z.string().trim().optional().default(""),
-  provider_name: z.string().trim().min(1, "Provider name is required"),
-  provider_address: z.string().trim().optional().default(""),
+  client: NameSchema,
+  client_address: AddressSchema,
+  provider: NameSchema,
+  provider_address: AddressSchema,
   scope: z.string().trim().min(1, "Scope is required"),
   deliverables: z.string().trim().optional().default(""),
   rate_type: z.enum(["hourly", "fixed", "retainer"]),
@@ -157,22 +192,20 @@ type FreelanceAnswers = z.infer<typeof validator>;
 
 function render(raw: Record<string, unknown>): string {
   const a = validator.parse(raw) as FreelanceAnswers;
+  const clientParty = formatParty(a.client);
+  const clientAddr = formatAddress(a.client_address);
+  const providerParty = formatParty(a.provider);
+  const providerAddr = formatAddress(a.provider_address);
 
   const parties = clauses("Parties", [
-    `This Agreement is entered into between ${fallback(
-      a.client_name,
-      "Client legal name to be inserted"
-    )} ("Client"), with its address at ${fallback(
-      a.client_address,
-      "Client address to be inserted"
-    )}, and ${fallback(a.provider_name, "Provider legal name to be inserted")} ("Provider"), with its address at ${fallback(a.provider_address, "Provider address to be inserted")}.`,
+    `This Agreement is entered into between ${clientParty} ("Client"), with its address at ${clientAddr}, and ${providerParty} ("Provider"), with its address at ${providerAddr}.`,
     "Each of the Client and the Provider is a 'Party' and together the 'Parties'.",
   ]);
 
   const scope = clauses("Scope of Work", [
     `The Provider will perform the following work for the Client: ${fallback(
       a.scope,
-      "scope of work to be agreed in writing"
+      "scope of work to be agreed in writing",
     )}.`,
     "The Provider will perform the work with reasonable professional skill and care, in accordance with industry norms.",
     "Any change in scope must be agreed in writing (email is sufficient) and may affect fees and timeline.",
@@ -218,7 +251,7 @@ function render(raw: Record<string, unknown>): string {
   const termination = clauses("Termination", [
     `Either Party may terminate this Agreement on ${fallback(
       a.termination_notice,
-      "the agreed number of"
+      "the agreed number of",
     )} days' written notice for any reason.`,
     "Either Party may terminate immediately for material breach not cured within fourteen (14) days of written notice.",
     "On termination, the Client will pay for all work performed up to the termination date.",
@@ -238,7 +271,7 @@ function render(raw: Record<string, unknown>): string {
 
   return [
     `# Freelance Services Agreement`,
-    `*Between ${a.client_name} and ${a.provider_name}*`,
+    `*Between ${clientParty} and ${providerParty}*`,
     parties,
     scope,
     deliverables,
@@ -256,7 +289,9 @@ function render(raw: Record<string, unknown>): string {
 function buildTitle(raw: Record<string, unknown>): string {
   const parsed = validator.safeParse(raw);
   if (!parsed.success) return "Freelance Services Agreement";
-  return `Freelance Agreement — ${parsed.data.client_name} & ${parsed.data.provider_name}`;
+  const c = formatParty(parsed.data.client);
+  const p = formatParty(parsed.data.provider);
+  return `Freelance Agreement — ${c} & ${p}`;
 }
 
 export const freelance: IndustrySchema = {

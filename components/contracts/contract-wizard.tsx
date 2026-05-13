@@ -3,11 +3,24 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import { INDUSTRY_META, type IndustryMeta } from "@/lib/contracts/manifest";
-import type { Question } from "@/lib/contracts/types";
+import type {
+  AddressValue,
+  NameValue,
+  Question,
+} from "@/lib/contracts/types";
 import { COUNTRIES } from "@/lib/countries";
 import { MarkdownPreview } from "@/lib/markdown/render-react";
 import { QuestionField } from "./question-field";
+import {
+  ClientPicker,
+  type SavedClient,
+} from "./client-picker";
+import {
+  BusinessProfilePicker,
+  type SavedBusinessProfile,
+} from "./business-profile-picker";
 
 type PickerOption = {
   id: string;
@@ -43,13 +56,44 @@ type Mode =
   | { kind: "preview"; industry: string; bodyMd: string; title: string; answers?: Record<string, unknown> };
 
 type Defaults = {
-  provider_name?: string | null;
+  provider?: NameValue | null;
+  provider_address?: AddressValue | null;
   provider_country?: string | null;
 };
 
 type Props = {
   defaults?: Defaults;
+  clients?: SavedClient[];
+  businessProfiles?: SavedBusinessProfile[];
 };
+
+const CLIENT_STEPS = new Set([
+  "client",
+  "client_address",
+  "disclosing_party",
+  "disclosing_party_address",
+  "receiving_party",
+  "receiving_party_address",
+]);
+
+const PROVIDER_STEPS = new Set(["provider", "provider_address"]);
+
+/** Map a step id to the (name id, address id) pair it belongs to. */
+function partyPair(stepId: string): { nameKey: string; addrKey: string } | null {
+  if (stepId === "client" || stepId === "client_address") {
+    return { nameKey: "client", addrKey: "client_address" };
+  }
+  if (stepId === "provider" || stepId === "provider_address") {
+    return { nameKey: "provider", addrKey: "provider_address" };
+  }
+  if (stepId === "disclosing_party" || stepId === "disclosing_party_address") {
+    return { nameKey: "disclosing_party", addrKey: "disclosing_party_address" };
+  }
+  if (stepId === "receiving_party" || stepId === "receiving_party_address") {
+    return { nameKey: "receiving_party", addrKey: "receiving_party_address" };
+  }
+  return null;
+}
 
 function defaultAnswers(meta: IndustryMeta, defaults: Defaults | undefined) {
   const out: Record<string, unknown> = {};
@@ -62,12 +106,20 @@ function defaultAnswers(meta: IndustryMeta, defaults: Defaults | undefined) {
       out[q.id] = q.defaultValue ?? [];
     }
   }
-  if (defaults?.provider_name && Object.prototype.hasOwnProperty.call(out, "provider_name") === false) {
-    if (meta.questions.some((q) => q.id === "provider_name")) {
-      out.provider_name = defaults.provider_name;
-    }
+  // Default business_profile (if any) wins over plain profile.business_name.
+  if (defaults?.provider && meta.questions.some((q) => q.id === "provider")) {
+    out.provider = { ...defaults.provider };
   }
-  if (defaults?.provider_country && meta.questions.some((q) => q.id === "governing_law")) {
+  if (
+    defaults?.provider_address &&
+    meta.questions.some((q) => q.id === "provider_address")
+  ) {
+    out.provider_address = { ...defaults.provider_address };
+  }
+  if (
+    defaults?.provider_country &&
+    meta.questions.some((q) => q.id === "governing_law")
+  ) {
     out.governing_law = defaults.provider_country;
   }
   return out;
@@ -75,21 +127,56 @@ function defaultAnswers(meta: IndustryMeta, defaults: Defaults | undefined) {
 
 function isQuestionAnswered(q: Question, value: unknown): boolean {
   if (!("required" in q) || !q.required) return true;
-  if (q.kind === "text" || q.kind === "select" || q.kind === "date") {
+  if (
+    q.kind === "text" ||
+    q.kind === "select" ||
+    q.kind === "date" ||
+    q.kind === "improve-textarea"
+  ) {
     return typeof value === "string" && value.trim().length > 0;
   }
   if (q.kind === "number") {
     return typeof value === "number" && !Number.isNaN(value);
   }
+  if (q.kind === "name-group") {
+    const v = value as NameValue | undefined;
+    if (!v || typeof v !== "object") return false;
+    return Boolean(
+      typeof v.first === "string" &&
+        v.first.trim() &&
+        typeof v.family === "string" &&
+        v.family.trim(),
+    );
+  }
+  if (q.kind === "address") {
+    const v = value as AddressValue | undefined;
+    if (!v || typeof v !== "object") return false;
+    return Boolean(
+      typeof v.country === "string" &&
+        v.country.length === 2 &&
+        typeof v.city === "string" &&
+        v.city.trim() &&
+        typeof v.street === "string" &&
+        v.street.trim() &&
+        typeof v.postal === "string" &&
+        v.postal.trim(),
+    );
+  }
   return true;
 }
 
-export function ContractWizard({ defaults }: Props) {
+export function ContractWizard({
+  defaults,
+  clients = [],
+  businessProfiles = [],
+}: Props) {
   const router = useRouter();
   const [mode, setMode] = React.useState<Mode>({ kind: "picker" });
   const [answers, setAnswers] = React.useState<Record<string, unknown>>({});
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const [saveClient, setSaveClient] = React.useState(false);
+  const [saveProvider, setSaveProvider] = React.useState(false);
 
   // custom-mode form state
   const [customIndustry, setCustomIndustry] = React.useState("");
@@ -106,11 +193,15 @@ export function ContractWizard({ defaults }: Props) {
     }
     if (!opt.meta) return;
     setAnswers(defaultAnswers(opt.meta, defaults));
+    setSaveClient(false);
+    setSaveProvider(false);
     setMode({ kind: "wizard", meta: opt.meta, step: 0 });
   };
 
   const goBackToPicker = () => {
     setAnswers({});
+    setSaveClient(false);
+    setSaveProvider(false);
     setError(null);
     setMode({ kind: "picker" });
   };
@@ -185,7 +276,7 @@ export function ContractWizard({ defaults }: Props) {
 
     const onNext = async () => {
       if (!canAdvance) {
-        setError("Please answer this question to continue.");
+        setError("Please complete this step to continue.");
         return;
       }
       if (!isLast) {
@@ -195,8 +286,12 @@ export function ContractWizard({ defaults }: Props) {
       await submitTemplate(meta, answers, {
         setSubmitting,
         setError,
-        onPreview: (bodyMd, title) =>
-          setMode({ kind: "preview", industry: meta.id, bodyMd, title, answers }),
+        onPreview: (bodyMd, title) => {
+          // Fire-and-forget saves after the draft is rendered.
+          if (saveClient) firePostClient(answers);
+          if (saveProvider) firePostBusinessProfile(answers);
+          setMode({ kind: "preview", industry: meta.id, bodyMd, title, answers });
+        },
       });
     };
 
@@ -207,6 +302,37 @@ export function ContractWizard({ defaults }: Props) {
       }
       setMode({ kind: "wizard", meta, step: step - 1 });
     };
+
+    const showClientPicker =
+      CLIENT_STEPS.has(question.id) && clients.length > 0;
+    const showProviderPicker =
+      PROVIDER_STEPS.has(question.id) && businessProfiles.length > 0;
+
+    const pair = partyPair(question.id);
+    const onPickClient = (name: NameValue, addr: AddressValue) => {
+      if (!pair) return;
+      setAnswers((prev) => ({
+        ...prev,
+        [pair.nameKey]: name,
+        [pair.addrKey]: addr,
+      }));
+      setError(null);
+    };
+    const onPickProvider = (name: NameValue, addr: AddressValue) => {
+      if (!pair) return;
+      setAnswers((prev) => ({
+        ...prev,
+        [pair.nameKey]: name,
+        [pair.addrKey]: addr,
+      }));
+      setError(null);
+    };
+
+    const showSaveClient =
+      question.id === "client" ||
+      question.id === "disclosing_party" ||
+      question.id === "receiving_party";
+    const showSaveProvider = question.id === "provider";
 
     return (
       <section className="section" style={{ paddingTop: 64 }}>
@@ -229,12 +355,62 @@ export function ContractWizard({ defaults }: Props) {
               <span className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
                 Question {step + 1} of {meta.questions.length}
               </span>
+
+              {showClientPicker ? (
+                <ClientPicker clients={clients} onPick={onPickClient} />
+              ) : null}
+              {showProviderPicker ? (
+                <BusinessProfilePicker
+                  profiles={businessProfiles}
+                  onPick={onPickProvider}
+                />
+              ) : null}
+
               <QuestionField
                 question={question}
                 value={value}
                 onChange={onChange}
                 error={error}
               />
+
+              {showSaveClient ? (
+                <label
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={saveClient}
+                    onChange={(e) => setSaveClient(e.target.checked)}
+                  />
+                  <span className="gf-body-sm" style={{ color: "var(--fg-2)" }}>
+                    Save this client for next time
+                  </span>
+                </label>
+              ) : null}
+              {showSaveProvider ? (
+                <label
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={saveProvider}
+                    onChange={(e) => setSaveProvider(e.target.checked)}
+                  />
+                  <span className="gf-body-sm" style={{ color: "var(--fg-2)" }}>
+                    Save my details for next time
+                  </span>
+                </label>
+              ) : null}
             </div>
 
             <div
@@ -603,6 +779,67 @@ async function submitTemplate(
   }
 }
 
+function firePostClient(answers: Record<string, unknown>): void {
+  const name = answers.client as NameValue | undefined;
+  const addr = answers.client_address as AddressValue | undefined;
+  // NDA fallback — only one of these will be present per industry.
+  const ndaName =
+    (answers.disclosing_party as NameValue | undefined) ??
+    (answers.receiving_party as NameValue | undefined);
+  const ndaAddr =
+    (answers.disclosing_party_address as AddressValue | undefined) ??
+    (answers.receiving_party_address as AddressValue | undefined);
+  const useName = name ?? ndaName;
+  const useAddr = addr ?? ndaAddr;
+  if (!useName || !useAddr) return;
+  const payload = {
+    first_name: useName.first ?? "",
+    family_name: useName.family ?? "",
+    business_name: useName.business?.trim() ? useName.business : null,
+    country_code: useAddr.country ?? "",
+    city: useAddr.city ?? "",
+    street: useAddr.street ?? "",
+    postal_code: useAddr.postal ?? "",
+  };
+  void fetch("/api/clients", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+    .then((r) =>
+      r.ok
+        ? toast.success("Client saved")
+        : toast.error("Couldn't save client"),
+    )
+    .catch(() => toast.error("Couldn't save client"));
+}
+
+function firePostBusinessProfile(answers: Record<string, unknown>): void {
+  const name = answers.provider as NameValue | undefined;
+  const addr = answers.provider_address as AddressValue | undefined;
+  if (!name || !addr) return;
+  const payload = {
+    first_name: name.first ?? "",
+    family_name: name.family ?? "",
+    business_name: name.business?.trim() ? name.business : null,
+    country_code: addr.country ?? "",
+    city: addr.city ?? "",
+    street: addr.street ?? "",
+    postal_code: addr.postal ?? "",
+  };
+  void fetch("/api/business-profiles", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+    .then((r) =>
+      r.ok
+        ? toast.success("Profile saved")
+        : toast.error("Couldn't save profile"),
+    )
+    .catch(() => toast.error("Couldn't save profile"));
+}
+
 type StreamingPanelProps = {
   industry: string;
   description: string;
@@ -680,7 +917,6 @@ function StreamingPanel({
           }
         }
 
-        // ensure done is set even if no done event
         setDone(true);
 
         const title = extractTitle(full) || `Custom contract — ${industry}`;
