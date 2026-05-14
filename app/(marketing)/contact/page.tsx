@@ -32,13 +32,13 @@ export default function ContactPage() {
             <p className="gf-body-sm" style={{ marginTop: 32 }}>
               Prefer email?{" "}
               <a
-                href="mailto:hello@greenflagged.app"
+                href="mailto:hello@greenflagged.xyz"
                 style={{
                   color: "var(--fg-1)",
                   borderBottom: "1px solid currentColor",
                 }}
               >
-                hello@greenflagged.app
+                hello@greenflagged.xyz
               </a>
             </p>
           </div>

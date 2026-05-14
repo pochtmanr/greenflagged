@@ -39,7 +39,7 @@ export default function PrivacyPage() {
         <strong className="text-text-primary">Your rights (GDPR).</strong>{" "}
         Access, rectification, erasure, restriction, portability, objection,
         and the right to lodge a complaint with your supervisory authority.
-        Email hello@greenflagged.app to exercise any right.
+        Email hello@greenflagged.xyz to exercise any right.
       </p>
       <p>
         <strong className="text-text-primary">Sub-processors.</strong>{" "}

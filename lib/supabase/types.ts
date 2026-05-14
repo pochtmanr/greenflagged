@@ -389,6 +389,51 @@ export interface Database {
         };
         Relationships: [];
       };
+      blog_posts: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          description: string;
+          body_md: string;
+          cover_image_url: string | null;
+          author_name: string;
+          tags: string[];
+          reading_minutes: number | null;
+          published_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          title: string;
+          description: string;
+          body_md: string;
+          cover_image_url?: string | null;
+          author_name?: string;
+          tags?: string[];
+          reading_minutes?: number | null;
+          published_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          title?: string;
+          description?: string;
+          body_md?: string;
+          cover_image_url?: string | null;
+          author_name?: string;
+          tags?: string[];
+          reading_minutes?: number | null;
+          published_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

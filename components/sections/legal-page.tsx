@@ -40,7 +40,7 @@ export function LegalPage({ title, updated, children }: LegalPageProps) {
             style={{ marginTop: 48, color: "var(--fg-3)" }}
           >
             This is placeholder content for launch. Final wording is pending
-            review by counsel. For questions: hello@greenflagged.app.
+            review by counsel. For questions: hello@greenflagged.xyz.
           </p>
         </div>
       </div>

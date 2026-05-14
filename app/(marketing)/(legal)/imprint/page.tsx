@@ -17,7 +17,7 @@ export default function ImprintPage() {
         <br />
         Company number: [TBD]
         <br />
-        Email: hello@greenflagged.app
+        Email: hello@greenflagged.xyz
       </p>
       <p>
         <strong className="text-text-primary">VAT.</strong> EU VAT is

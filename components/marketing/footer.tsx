@@ -6,6 +6,7 @@ const COLS: Array<{ l: string; items: Array<[label: string, href: string]> }> = 
     l: "Product",
     items: [
       ["How it works", "/how-it-works"],
+      ["Check a contract", "/check"],
       ["Use cases", "/use-cases"],
       ["Pricing", "/pricing"],
     ],
@@ -15,6 +16,7 @@ const COLS: Array<{ l: string; items: Array<[label: string, href: string]> }> = 
     items: [
       ["About", "/about"],
       ["Blog", "/blog"],
+      ["Press", "/press"],
       ["Contact", "/contact"],
     ],
   },
@@ -59,7 +61,7 @@ export function Footer() {
         </div>
         <div className="footer__strip">
           <span>© 2026 · Simnetiq Ltd · Informational, not legal advice.</span>
-          <a href="mailto:hello@greenflagged.app">hello@greenflagged.app</a>
+          <a href="mailto:hello@greenflagged.xyz">hello@greenflagged.xyz</a>
         </div>
       </div>
     </footer>
