@@ -581,13 +581,6 @@ button { font-family: inherit; }
   z-index: 40;
   padding: 0 var(--shell-pad-x);
   pointer-events: none;
-  /* Promote to its own compositor layer so iOS Safari doesn't
-     reflow it when the URL bar collapses on first scroll. */
-  transform: translate3d(0, 0, 0);
-  -webkit-transform: translate3d(0, 0, 0);
-  will-change: transform;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 .nav__inner {
   pointer-events: auto;
@@ -1689,7 +1682,6 @@ button { font-family: inherit; }
   transition:
     opacity var(--motion-base) var(--motion-ease),
     transform var(--motion-base) var(--motion-ease);
-  will-change: opacity, transform;
 }
 [data-reveal][data-revealed="true"] {
   opacity: 1;
@@ -1868,12 +1860,10 @@ button { font-family: inherit; }
 .clause-cell__bg {
   object-fit: cover;
   z-index: 0;
-  transition: transform 600ms var(--motion-ease), filter 600ms var(--motion-ease);
-  filter: saturate(0.92) contrast(1.02);
+  transition: transform 600ms var(--motion-ease);
 }
 .clause-cell--art:hover .clause-cell__bg {
   transform: scale(1.04);
-  filter: saturate(1) contrast(1.05);
 }
 .clause-cell--art::after {
   content: "";
@@ -1893,9 +1883,7 @@ button { font-family: inherit; }
   left: 10px;
   top: 10px;
   color: var(--paper-0);
-  background: color-mix(in srgb, var(--ink-500) 70%, transparent);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: color-mix(in srgb, var(--ink-500) 92%, transparent);
   padding: 4px 8px;
   letter-spacing: 0.08em;
   font-size: 10px;
@@ -1911,9 +1899,7 @@ button { font-family: inherit; }
   flex-direction: column;
   gap: 5px;
   padding: 12px 14px;
-  background: color-mix(in srgb, var(--ink-500) 84%, transparent);
-  backdrop-filter: blur(12px) saturate(1.1);
-  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  background: color-mix(in srgb, var(--ink-500) 94%, transparent);
   border: 0;
   color: var(--paper-0);
 }
@@ -1989,9 +1975,7 @@ button { font-family: inherit; }
   gap: 14px;
   max-width: 560px;
   padding: 22px 26px;
-  background: color-mix(in srgb, var(--ink-500) 84%, transparent);
-  backdrop-filter: blur(14px) saturate(1.1);
-  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  background: color-mix(in srgb, var(--ink-500) 94%, transparent);
   border: 0;
   color: var(--paper-0);
 }
@@ -2042,7 +2026,6 @@ button { font-family: inherit; }
   .clause-cell__thumb img,
   .clause-cell--art:hover .clause-cell__thumb img {
     transform: none;
-    filter: saturate(0.92) contrast(1.02);
     transition: none;
   }
 }
