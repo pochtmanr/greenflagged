@@ -213,6 +213,7 @@ export interface Database {
           taxonomy: Json | null;
           verdict_md: string | null;
           redlines: Json | null;
+          source_text: string | null;
           created_at: string;
         };
         Insert: {
@@ -221,6 +222,7 @@ export interface Database {
           taxonomy?: Json | null;
           verdict_md?: string | null;
           redlines?: Json | null;
+          source_text?: string | null;
           created_at?: string;
         };
         Update: {
@@ -229,6 +231,7 @@ export interface Database {
           taxonomy?: Json | null;
           verdict_md?: string | null;
           redlines?: Json | null;
+          source_text?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -253,6 +256,27 @@ export interface Database {
           user_id?: string;
           kind?: UsageEventKind;
           contract_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      preview_events: {
+        Row: {
+          id: number;
+          ip: string;
+          severity: VerdictSeverity | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          ip: string;
+          severity?: VerdictSeverity | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          ip?: string;
+          severity?: VerdictSeverity | null;
           created_at?: string;
         };
         Relationships: [];

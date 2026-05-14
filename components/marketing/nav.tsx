@@ -13,18 +13,17 @@ const LINKS: Array<[label: string, href: string]> = [
   ["Blog", "/blog"],
 ];
 
-export function Nav() {
-  const [scrolled, setScrolled] = React.useState(false);
+type Props = {
+  authed?: boolean;
+};
+
+export function Nav({ authed = false }: Props) {
   const [open, setOpen] = React.useState(false);
+
+  const ctaHref = authed ? "/dashboard" : "/sign-in";
+  const ctaLabel = authed ? "Dashboard" : "Sign in";
   const panelRef = React.useRef<HTMLDivElement | null>(null);
   const toggleRef = React.useRef<HTMLButtonElement | null>(null);
-
-  React.useEffect(() => {
-    const f = () => setScrolled(window.scrollY > 8);
-    f();
-    window.addEventListener("scroll", f, { passive: true });
-    return () => window.removeEventListener("scroll", f);
-  }, []);
 
   React.useEffect(() => {
     if (!open) return;
@@ -53,8 +52,10 @@ export function Nav() {
   const close = () => setOpen(false);
 
   return (
-    <header className={"nav " + (scrolled ? "nav--scrolled" : "")}>
+    <header className="nav">
       <div className="nav__inner">
+        <span className="gf-frame-bl" aria-hidden />
+        <span className="gf-frame-br" aria-hidden />
         <Wordmark />
         <nav className="nav__links">
           {LINKS.map(([label, href]) => (
@@ -65,11 +66,8 @@ export function Nav() {
         </nav>
         <div className="nav__actions">
           <ThemeToggle />
-          <Link href="/sign-in" className="nav__link">
-            Sign in
-          </Link>
-          <Link href="/#hero-drop" className="gf-btn nav__cta">
-            Try one free <span className="arrow">→</span>
+          <Link href={ctaHref} className="gf-btn gf-btn-accent nav__cta">
+            {ctaLabel} <span className="arrow">→</span>
           </Link>
           <button
             ref={toggleRef}
@@ -93,6 +91,8 @@ export function Nav() {
         className={"nav__mobile-panel " + (open ? "is-open" : "")}
         hidden={!open}
       >
+        <span className="gf-frame-bl" aria-hidden />
+        <span className="gf-frame-br" aria-hidden />
         {LINKS.map(([label, href]) => (
           <Link
             key={href}
@@ -103,19 +103,16 @@ export function Nav() {
             {label}
           </Link>
         ))}
+        <div className="nav__mobile-row">
+          <span className="nav__mobile-row__label">// Theme</span>
+          <ThemeToggle />
+        </div>
         <Link
-          href="/sign-in"
-          className="nav__mobile-link"
+          href={ctaHref}
+          className="gf-btn gf-btn-accent nav__mobile-cta"
           onClick={close}
         >
-          Sign in
-        </Link>
-        <Link
-          href="/#hero-drop"
-          className="gf-btn nav__mobile-cta"
-          onClick={close}
-        >
-          Try one free <span className="arrow">→</span>
+          {ctaLabel} <span className="arrow">→</span>
         </Link>
       </div>
     </header>

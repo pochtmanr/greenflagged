@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DropZone } from "@/components/marketing/drop-zone";
+import { HeroAnalyzer } from "@/components/marketing/hero-analyzer";
 
 export function Hero() {
   return (
@@ -14,15 +14,14 @@ export function Hero() {
           </h1>
           <p className="hero__sub">
             Drop any contract. Our AI scans every clause, ranks the risks, and
-            tells you exactly what to push back on — in plain English. Free. No
-            account needed.
+            tells you exactly what to push back on — in plain English.
           </p>
           <div className="hero__cta">
-            <Link href="#hero-drop" className="gf-btn">
-              Scan one free <span className="arrow">→</span>
+            <Link href="/sign-in" className="gf-btn gf-btn-accent">
+              Log in <span className="arrow">→</span>
             </Link>
-            <Link href="/how-it-works" className="gf-btn-link">
-              How it works
+            <Link href="/sign-up" className="gf-btn-link">
+              Sign up free
             </Link>
           </div>
           <ul className="hero__trust">
@@ -41,7 +40,7 @@ export function Hero() {
           </ul>
         </div>
         <div>
-          <DropZone />
+          <HeroAnalyzer />
         </div>
       </div>
     </section>

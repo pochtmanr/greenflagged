@@ -9,8 +9,10 @@ export default function AuthLayout({
 }) {
   return (
     <>
-      <header className="nav nav--scrolled">
+      <header className="nav">
         <div className="nav__inner">
+          <span className="gf-frame-bl" aria-hidden />
+          <span className="gf-frame-br" aria-hidden />
           <Wordmark />
           <div className="nav__actions">
             <ThemeToggle />
@@ -20,7 +22,7 @@ export default function AuthLayout({
           </div>
         </div>
       </header>
-      <main style={{ paddingTop: 64 }}>{children}</main>
+      <main style={{ paddingTop: 88 }}>{children}</main>
     </>
   );
 }

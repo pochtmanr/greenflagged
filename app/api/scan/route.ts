@@ -162,6 +162,7 @@ export async function POST(req: Request) {
     taxonomy: result.taxonomy,
     verdict_md: verdictMd,
     redlines: result.redlines,
+    source_text: text,
   });
   if (insertScan.error) {
     return bad(`Failed to save scan: ${insertScan.error.message}`, 500);

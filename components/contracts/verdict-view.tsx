@@ -2,6 +2,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import type { Redline, TaxonomyEntry } from "@/lib/ai/review";
 import type { VerdictSeverity } from "@/lib/supabase/types";
+import { FixButton } from "./fix-button";
 import {
   SEVERITY_LABEL,
   SEVERITY_SHORT,
@@ -16,6 +17,13 @@ type VerdictViewProps = {
   verdictMd: string;
   taxonomy: Record<string, TaxonomyEntry>;
   redlines: Redline[];
+};
+
+const SEV_RANK: Record<VerdictSeverity, number> = {
+  red: 0,
+  orange: 1,
+  yellow: 2,
+  green: 3,
 };
 
 function formatDate(iso: string) {
@@ -48,6 +56,10 @@ export function VerdictView({
     }
   );
 
+  const sortedRedlines = [...redlines].sort(
+    (a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity],
+  );
+
   return (
     <section className="section" style={{ paddingTop: 64 }}>
       <div className="app-shell">
@@ -71,13 +83,26 @@ export function VerdictView({
               }}
             >
               <span className="gf-label">// VERDICT</span>
-              <Link
-                href={`/api/contracts/${contractId}/report/pdf`}
-                className="gf-btn-link"
-                prefetch={false}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  flexWrap: "wrap",
+                }}
               >
-                Download report (PDF) <span className="arrow">→</span>
-              </Link>
+                <Link
+                  href={`/api/contracts/${contractId}/report/pdf`}
+                  className="gf-btn-link"
+                  prefetch={false}
+                >
+                  Download report (PDF) <span className="arrow">→</span>
+                </Link>
+                <FixButton
+                  contractId={contractId}
+                  disabled={redlines.length === 0}
+                />
+              </div>
             </div>
             <h1 className="gf-h1" style={{ marginBottom: 4 }}>
               {title}
@@ -222,11 +247,11 @@ export function VerdictView({
                 className="gf-mono-sm"
                 style={{ color: "var(--fg-3)" }}
               >
-                {redlines.length} item{redlines.length === 1 ? "" : "s"}
+                {sortedRedlines.length} item{sortedRedlines.length === 1 ? "" : "s"}
               </span>
             </div>
 
-            {redlines.length === 0 ? (
+            {sortedRedlines.length === 0 ? (
               <p
                 className="gf-body"
                 style={{ color: "var(--fg-2)", margin: 0 }}
@@ -238,7 +263,7 @@ export function VerdictView({
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 16 }}
               >
-                {redlines.map((rl, idx) => (
+                {sortedRedlines.map((rl, idx) => (
                   <div
                     key={idx}
                     className="gf-frame"

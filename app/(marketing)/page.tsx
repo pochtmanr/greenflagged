@@ -1,5 +1,4 @@
 import { Hero } from "@/components/marketing/hero";
-import { TrustRow } from "@/components/marketing/trust-row";
 import { ThreeStep } from "@/components/marketing/three-step";
 import { SampleVerdict } from "@/components/marketing/sample-verdict";
 import { ClauseGrid } from "@/components/marketing/clause-grid";
@@ -18,7 +17,6 @@ export default async function HomePage() {
   return (
     <>
       <Hero />
-      <TrustRow />
       <ThreeStep />
       <SampleVerdict />
       <ClauseGrid />

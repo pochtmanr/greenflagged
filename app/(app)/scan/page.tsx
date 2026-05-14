@@ -14,7 +14,6 @@ export default function ScanPage() {
     <section className="section" style={{ paddingTop: 64 }}>
       <div className="app-shell">
         <div
-          className="content--prose"
           style={{
             display: "flex",
             flexDirection: "column",

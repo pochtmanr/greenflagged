@@ -29,10 +29,10 @@ export type ThemedPdfArgs = {
   business?: BusinessFields;
 };
 
-const PAGE_MARGIN_X = 56;
-const PAGE_MARGIN_Y = 56;
+export const PAGE_MARGIN_X = 56;
+export const PAGE_MARGIN_Y = 56;
 
-function pageStyle(s: ResolvedStyle) {
+export function pageStyle(s: ResolvedStyle) {
   return StyleSheet.create({
     page: {
       paddingTop: PAGE_MARGIN_Y,
@@ -46,7 +46,7 @@ function pageStyle(s: ResolvedStyle) {
   }).page;
 }
 
-function blockStyles(s: ResolvedStyle) {
+export function blockStyles(s: ResolvedStyle) {
   return StyleSheet.create({
     h1: {
       fontSize: 22,
@@ -94,7 +94,7 @@ function blockStyles(s: ResolvedStyle) {
   });
 }
 
-function InlineText({
+export function InlineText({
   value,
   resolved,
 }: {
@@ -138,7 +138,7 @@ function renderInline(seg: Inline, key: number, resolved: ResolvedStyle): React.
   return <Text key={key}>{seg.text}</Text>;
 }
 
-function renderBlock(
+export function renderBlock(
   block: Block,
   index: number,
   resolved: ResolvedStyle,

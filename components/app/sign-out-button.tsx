@@ -27,6 +27,7 @@ export function SignOutButton({ className, children }: Props) {
       onClick={onClick}
       disabled={pending}
       className={className ?? "gf-btn-link"}
+      style={{ color: "var(--sev-red)" }}
     >
       {pending ? "Signing out…" : children ?? "Sign out"}
     </button>

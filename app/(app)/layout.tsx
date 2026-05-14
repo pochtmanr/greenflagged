@@ -16,10 +16,18 @@ export default async function AppLayout({
     redirect("/sign-in");
   }
 
+  const meta = user.user_metadata as Record<string, unknown> | undefined;
+  const avatarUrl =
+    typeof meta?.avatar_url === "string"
+      ? meta.avatar_url
+      : typeof meta?.picture === "string"
+      ? meta.picture
+      : null;
+
   return (
     <>
-      <AppNav email={user.email ?? null} />
-      <main style={{ paddingTop: 64 }}>{children}</main>
+      <AppNav email={user.email ?? null} avatarUrl={avatarUrl} />
+      <main style={{ paddingTop: 88 }}>{children}</main>
     </>
   );
 }

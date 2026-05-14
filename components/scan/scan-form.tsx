@@ -93,7 +93,7 @@ function ScanProgress({
       aria-live="polite"
       style={{
         border: "1px dashed var(--paper-400)",
-        borderRadius: 12,
+        borderRadius: 2,
         padding: "32px 24px",
         background:
           "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(127,212,76,0.04) 100%)",
@@ -547,7 +547,7 @@ export function ScanForm() {
               background: "transparent",
               color: "var(--fg-1)",
               border: "1px solid var(--paper-400)",
-              borderRadius: 6,
+              borderRadius: 2,
               padding: "4px 8px",
               fontFamily: "inherit",
               fontSize: "inherit",

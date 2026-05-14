@@ -16,9 +16,10 @@ const LINKS: Array<[label: string, href: string]> = [
 
 type Props = {
   email: string | null;
+  avatarUrl?: string | null;
 };
 
-export function AppNav({ email }: Props) {
+export function AppNav({ email, avatarUrl }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -70,8 +71,10 @@ export function AppNav({ email }: Props) {
     pathname === href || pathname?.startsWith(href + "/");
 
   return (
-    <header className="nav nav--scrolled">
+    <header className="nav">
       <div className="nav__inner">
+        <span className="gf-frame-bl" aria-hidden />
+        <span className="gf-frame-br" aria-hidden />
         <Wordmark href="/dashboard" />
         <nav className="nav__links">
           {LINKS.map(([label, href]) => (
@@ -99,10 +102,12 @@ export function AppNav({ email }: Props) {
               aria-expanded={menuOpen}
               aria-label="Account menu"
               style={{
-                width: 32,
-                height: 32,
+                width: 36,
+                height: 36,
                 borderRadius: 9999,
-                background: "var(--ink-500)",
+                overflow: "hidden",
+                padding: 0,
+                background: avatarUrl ? "transparent" : "var(--ink-500)",
                 color: "var(--paper-0)",
                 display: "inline-flex",
                 alignItems: "center",
@@ -113,7 +118,24 @@ export function AppNav({ email }: Props) {
                 border: "1px solid var(--rule)",
               }}
             >
-              {initial}
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  loading="lazy"
+                  width={36}
+                  height={36}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                />
+              ) : (
+                initial
+              )}
             </button>
             {menuOpen ? (
               <div
@@ -182,6 +204,8 @@ export function AppNav({ email }: Props) {
         className={"nav__mobile-panel " + (open ? "is-open" : "")}
         hidden={!open}
       >
+        <span className="gf-frame-bl" aria-hidden />
+        <span className="gf-frame-br" aria-hidden />
         {LINKS.map(([label, href]) => (
           <Link
             key={label}
@@ -192,6 +216,10 @@ export function AppNav({ email }: Props) {
             {label}
           </Link>
         ))}
+        <div className="nav__mobile-row">
+          <span className="nav__mobile-row__label">// Theme</span>
+          <ThemeToggle />
+        </div>
         <SignOutButton className="gf-mono-sm nav__mobile-link">
           Sign out
         </SignOutButton>
