@@ -1,55 +1,57 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
+# macOS
 .DS_Store
-*.pem
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-!.env.example
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# claude code state / worktrees
+# Claude Code state / worktrees
 .claude/
 
-# instruction prompts (local context, not source)
-prompt*.md
+# Env files everywhere
+.env
+.env.*
+!.env.example
 
-# design reference kits + loose root assets (use public/ for real assets)
-GreenFlagged Design System/
-OG image _ 1200 _ 630.png
-greenlogo.png
-greensvg.svg
+# Vercel
+.vercel
 
+# ─────────────────────────────────────────────
+# landing/ — Next.js workspace
+# ─────────────────────────────────────────────
+landing/node_modules/
+landing/.next/
+landing/out/
+landing/build/
+landing/coverage/
+landing/.pnp
+landing/.pnp.*
+landing/.yarn/*
+!landing/.yarn/patches
+!landing/.yarn/plugins
+!landing/.yarn/releases
+!landing/.yarn/versions
+landing/*.tsbuildinfo
+landing/next-env.d.ts
+landing/*.pem
+landing/npm-debug.log*
+landing/yarn-debug.log*
+landing/yarn-error.log*
+landing/.pnpm-debug.log*
+
+# ─────────────────────────────────────────────
+# ios/ — Xcode / SwiftPM workspace
+# ─────────────────────────────────────────────
+ios/build/
+ios/DerivedData/
+ios/.build/
+ios/.swiftpm/
+ios/**/*.xcuserstate
+ios/**/xcuserdata/
+ios/**/*.xcuserdatad/
+ios/**/Pods/
+ios/**/Carthage/
+ios/Secrets.xcconfig
+
+# ─────────────────────────────────────────────
+# claude/ — keep prompts + design source local-only
+# ─────────────────────────────────────────────
+claude/prompts/
+claude/design/source/
+claude/scratch/

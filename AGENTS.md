@@ -1,33 +1,62 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# Agent rules — Green Flagged monorepo
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+## Repo layout
 
-<!-- BEGIN:mempalace -->
-# MemPalace — design standards live here
+- `landing/` — Next.js 16 app (App Router, Turbopack, Tailwind v4, Supabase).
+- `ios/` — Native SwiftUI app, iOS 26+, Xcode 16.
+- `claude/` — Specs, ADRs, API contracts, design tokens, prompts.
 
-Before doing any UI / design work in this project, query MemPalace:
+## Before any UI work
+
+Query MemPalace first:
 
 ```
-mempalace search "<topic>" --wing greenflagged
+mempalace search "<topic>" --wing greenflagged --room design
 ```
 
 Or via MCP: `mempalace_search` with `wing: "greenflagged"`, `room: "design"`.
+The drawers there override generic design instincts.
 
-The `greenflagged/design` room holds the brand color rules, typography, component
-map, the landing-hero composition recipe, spacing/radius/motion rules, and the
-blur/glass surface policy. Every agent that touches UI in this repo must read
-those drawers first — they override generic design instincts.
+Non-negotiable design rules (also in [`claude/design/tokens.md`](claude/design/tokens.md)):
+- Nav-on-scroll, cookie banner, and the hero chip are SOLID — no `backdrop-blur`.
+- Green is the only decorative color. Blue/yellow/red/purple are signals only
+  (severity, status, badge tier).
+- Sharp 2px corners everywhere, UPPERCASE mono labels, dark `#121212` bg.
+- Inter for body, JetBrains Mono for labels and code.
 
-Key non-obvious rules already encoded:
+## landing/ specifics
 
-- Nav-on-scroll, cookie banner, and the hero chip are SOLID — no `backdrop-blur`,
-  no opacity. Glass cards (`GlassCard`) still use blur intentionally.
-- Green is the only decorative color. Blue / yellow / red / purple are reserved
-  for signals (severity, status, badge tiers), not aesthetics.
-- Auth-flow pages live under `app/(auth)/`, not under `(marketing)`.
+This Next.js install is NOT what your training data remembers. Read
+`landing/node_modules/next/dist/docs/` for the guide that matches the installed
+version before non-trivial changes. Heed deprecation notices.
 
-Save new design decisions back into MemPalace under `greenflagged/design` so the
-rules compound across sessions.
-<!-- END:mempalace -->
+- pnpm workspace; commands run from `landing/`: `pnpm dev`, `pnpm build`,
+  `pnpm tsc --noEmit`.
+- Auth pages live under `landing/app/(auth)/`. Marketing under
+  `landing/app/(marketing)/`. App under `landing/app/(app)/`.
+- Server routes auth via `getSupabaseServer()`. Mobile clients send
+  `Authorization: Bearer <access_token>` — see [`claude/api/bearer-auth.md`](claude/api/bearer-auth.md).
+
+## ios/ specifics
+
+- iOS 26 deployment target. Swift 6, SwiftUI, `@Observable` macro.
+- No third-party state lib. Apple's Observable + NavigationStack is enough.
+- All Anthropic / OpenAI calls stay server-side. Mobile hits `landing/`'s API
+  with a Supabase JWT, never an AI provider key.
+- Billing: StoreKit 2 only. Web's Revolut/OxaPay flow is web-only. See
+  [`claude/ios/billing-iap.md`](claude/ios/billing-iap.md).
+
+## Git workflow (HARD RULE)
+
+1. All work on `main`. No `feat/*`, no `fix/*`, no PRs.
+2. Never `git checkout -b` or `git switch -c`.
+3. If a session inherits a non-main branch: fast-forward `main`, push, delete the side branch.
+4. Worktrees are fine; the branch inside must still merge to `main` immediately.
+
+## Never
+
+- Hardcode credentials, API keys, URLs, or ports. Read from env. Fail loudly.
+- Commit `.env*` or `Secrets.xcconfig`.
+- Add new accent colors unless they represent a signal.
+- Run `expo prebuild --clean` — different project; the rule still stands: no
+  destructive build resets without explicit confirmation.
