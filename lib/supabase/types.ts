@@ -16,23 +16,20 @@ export type ContractIndustry = "freelance" | "software" | "design" | "nda";
 export type VerdictSeverity = "green" | "yellow" | "orange" | "red";
 export type UsageEventKind = "scan" | "draft";
 
-export type PlanId =
-  | "free"
-  | "freelancer_monthly"
-  | "freelancer_yearly"
-  | "pro_monthly"
-  | "pro_yearly";
+export type PlanId = "free" | "standard";
 export type SubscriptionStatus =
   | "active"
   | "trialing"
   | "past_due"
   | "canceled"
   | "expired";
-export type CreditSource = "one_off_9eur" | "admin_grant";
+export type CreditSource = "payg_3usd" | "admin_grant";
+export type PaymentProvider = "revolut" | "oxapay";
 export type PaymentKind =
   | "subscription_initial"
   | "subscription_renewal"
-  | "one_off";
+  | "one_off"
+  | "overage";
 export type PaymentStatus = "pending" | "succeeded" | "failed" | "refunded";
 
 export interface Database {
@@ -324,8 +321,7 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          scans_remaining: number;
-          drafts_remaining: number;
+          contracts_remaining: number;
           expires_at: string;
           source: CreditSource;
           created_at: string;
@@ -333,8 +329,7 @@ export interface Database {
         Insert: {
           id?: string;
           user_id: string;
-          scans_remaining?: number;
-          drafts_remaining?: number;
+          contracts_remaining?: number;
           expires_at: string;
           source: CreditSource;
           created_at?: string;
@@ -342,8 +337,7 @@ export interface Database {
         Update: {
           id?: string;
           user_id?: string;
-          scans_remaining?: number;
-          drafts_remaining?: number;
+          contracts_remaining?: number;
           expires_at?: string;
           source?: CreditSource;
           created_at?: string;
@@ -360,6 +354,8 @@ export interface Database {
           amount_cents: number;
           currency: string;
           status: PaymentStatus;
+          provider: PaymentProvider;
+          oxapay_track_id: string | null;
           raw: Json | null;
           created_at: string;
         };
@@ -372,6 +368,8 @@ export interface Database {
           amount_cents: number;
           currency?: string;
           status: PaymentStatus;
+          provider?: PaymentProvider;
+          oxapay_track_id?: string | null;
           raw?: Json | null;
           created_at?: string;
         };
@@ -384,6 +382,8 @@ export interface Database {
           amount_cents?: number;
           currency?: string;
           status?: PaymentStatus;
+          provider?: PaymentProvider;
+          oxapay_track_id?: string | null;
           raw?: Json | null;
           created_at?: string;
         };

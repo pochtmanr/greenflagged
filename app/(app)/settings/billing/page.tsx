@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import type { PlanId, PaymentStatus } from "@/lib/supabase/types";
-import { PLANS, ONE_OFF } from "@/lib/billing/plans";
+import { PAYG, PLANS } from "@/lib/billing/plans";
 import { getQuota } from "@/lib/billing/quota";
 import { BillingActions } from "@/components/settings/billing-actions";
 import { BillingCheckoutClient } from "@/components/settings/billing-checkout";
@@ -16,10 +16,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-function fmtPrice(cents: number, interval: "month" | "year" | "once"): string {
-  const eur = (cents / 100).toFixed(0);
-  if (interval === "once") return `€${eur}`;
-  return `€${eur} / ${interval === "month" ? "mo" : "yr"}`;
+// NOTE: This page is a thin compile-time shim updated in phase 11 so the
+// pricing-v2 foundation lands without a broken /settings/billing route.
+// Prompt 14 owns the proper redesign (cards, copy, overage UI).
+
+function fmtUsd(cents: number): string {
+  return `$${(cents / 100).toFixed(0)}`;
 }
 
 function fmtDate(iso: string | null): string {
@@ -65,16 +67,15 @@ function statusLabel(status: PaymentStatus): string {
 }
 
 function PlanCard({
-  plan,
+  planId,
   active,
-  yearlySaving,
   highlighted,
 }: {
-  plan: { id: PlanId; label: string; monthly: number; yearly?: number };
+  planId: PlanId;
   active: boolean;
-  yearlySaving?: number;
   highlighted?: boolean;
 }) {
+  const plan = PLANS[planId];
   return (
     <div
       className="gf-card"
@@ -100,7 +101,7 @@ function PlanCard({
         {plan.label}
       </h3>
       <div className="gf-mono" style={{ fontSize: 28, color: "var(--fg-1)" }}>
-        €{(plan.monthly / 100).toFixed(0)}
+        {fmtUsd(plan.price_cents)}
         <span
           className="gf-mono-sm"
           style={{ color: "var(--fg-3)", marginLeft: 8 }}
@@ -108,21 +109,16 @@ function PlanCard({
           / mo
         </span>
       </div>
-      {plan.yearly ? (
-        <div className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
-          €{(plan.yearly / 100).toFixed(0)} / yr
-          {yearlySaving ? (
-            <span style={{ color: "var(--sev-green)", marginLeft: 8 }}>
-              save €{yearlySaving}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
+      <div className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
+        {plan.contracts} contract{plan.contracts === 1 ? "" : "s"} / month
+        {plan.overage_price_cents
+          ? ` · then ${fmtUsd(plan.overage_price_cents)} each`
+          : ""}
+      </div>
       <BillingCheckoutClient
         active={active}
         planId={plan.id}
         planLabel={plan.label}
-        hasYearly={Boolean(plan.yearly)}
       />
     </div>
   );
@@ -264,34 +260,35 @@ export default async function BillingPage() {
             </h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div className="gf-specrow">
-                <span className="key">Scans</span>
+                <span className="key">Contracts</span>
                 <span className="dots" aria-hidden />
                 <span className="val">
-                  {quota.scans.unlimited
-                    ? `${quota.scans.used} · Unlimited`
-                    : `${quota.scans.used} / ${quota.scans.limit}`}
+                  {quota.contracts.unlimited
+                    ? `${quota.contracts.used} · Unlimited`
+                    : `${quota.contracts.used} / ${quota.contracts.limit}`}
                 </span>
               </div>
-              <div className="gf-specrow">
-                <span className="key">Drafts</span>
-                <span className="dots" aria-hidden />
-                <span className="val">
-                  {quota.drafts.unlimited
-                    ? `${quota.drafts.used} · Unlimited`
-                    : `${quota.drafts.used} / ${quota.drafts.limit}`}
-                </span>
-              </div>
-              {quota.credits.scans + quota.credits.drafts > 0 ? (
+              {quota.credits.contracts > 0 ? (
                 <div className="gf-specrow">
-                  <span className="key">Bonus credits</span>
+                  <span className="key">Credits</span>
                   <span className="dots" aria-hidden />
                   <span className="val">
-                    +{quota.credits.scans} scan / +{quota.credits.drafts} draft
+                    +{quota.credits.contracts} contract
+                    {quota.credits.contracts === 1 ? "" : "s"}
                     {quota.credits.earliest_expires_at
                       ? ` · expires ${fmtDate(quota.credits.earliest_expires_at)}`
                       : ""}
                   </span>
                 </div>
+              ) : null}
+              {quota.overage ? (
+                <p
+                  className="gf-mono-sm"
+                  style={{ color: "var(--sev-orange)", margin: 0 }}
+                >
+                  You&apos;ve used your included allowance. Additional contracts
+                  this month will be auto-billed at {fmtUsd(PLANS.standard.overage_price_cents ?? 300)} each.
+                </p>
               ) : null}
             </div>
           </div>
@@ -304,62 +301,28 @@ export default async function BillingPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
                 gap: 16,
               }}
               className="billing__plans"
             >
+              <PlanCard planId="free" active={planId === "free"} />
               <PlanCard
-                plan={{
-                  id: "free",
-                  label: "Free",
-                  monthly: 0,
-                }}
-                active={planId === "free"}
-              />
-              <PlanCard
-                plan={{
-                  id: "freelancer_monthly",
-                  label: "Freelancer",
-                  monthly: PLANS.freelancer_monthly.price_cents,
-                  yearly: PLANS.freelancer_yearly.price_cents,
-                }}
-                active={
-                  planId === "freelancer_monthly" ||
-                  planId === "freelancer_yearly"
-                }
-                yearlySaving={Math.round(
-                  (PLANS.freelancer_monthly.price_cents * 12 -
-                    PLANS.freelancer_yearly.price_cents) /
-                    100,
-                )}
+                planId="standard"
+                active={planId === "standard"}
                 highlighted
-              />
-              <PlanCard
-                plan={{
-                  id: "pro_monthly",
-                  label: "Pro",
-                  monthly: PLANS.pro_monthly.price_cents,
-                  yearly: PLANS.pro_yearly.price_cents,
-                }}
-                active={planId === "pro_monthly" || planId === "pro_yearly"}
-                yearlySaving={Math.round(
-                  (PLANS.pro_monthly.price_cents * 12 -
-                    PLANS.pro_yearly.price_cents) /
-                    100,
-                )}
               />
             </div>
           </div>
 
-          {/* One-off banner */}
+          {/* PAYG banner */}
           <div
             className="gf-frame"
             style={{ display: "flex", flexDirection: "column", gap: 12 }}
           >
             <span className="gf-frame-bl" aria-hidden />
             <span className="gf-frame-br" aria-hidden />
-            <span className="gf-label">// ONE-OFF</span>
+            <span className="gf-label">// PAY-AS-YOU-GO</span>
             <h3 className="gf-h3" style={{ margin: 0 }}>
               Just need one contract?
             </h3>
@@ -367,10 +330,10 @@ export default async function BillingPage() {
               className="gf-body-sm"
               style={{ color: "var(--fg-2)", margin: 0 }}
             >
-              Buy a single scan + draft for {fmtPrice(ONE_OFF.price_cents, "once")}.
-              Valid for {ONE_OFF.ttl_days} days. No subscription required.
+              Buy a single contract credit for {fmtUsd(PAYG.price_cents)}.
+              Valid for {PAYG.ttl_days} days. No subscription required.
             </p>
-            <BillingActions kind="one_off" />
+            <BillingActions kind="payg" />
           </div>
 
           {/* Payment history */}
@@ -397,10 +360,12 @@ export default async function BillingPage() {
                     <span className="key">
                       {fmtDate(p.created_at)} ·{" "}
                       {p.kind === "one_off"
-                        ? "One-off"
-                        : p.kind === "subscription_initial"
-                          ? `${p.plan ?? ""} (initial)`
-                          : `${p.plan ?? ""} (renewal)`}
+                        ? "PAYG credit"
+                        : p.kind === "overage"
+                          ? "Overage"
+                          : p.kind === "subscription_initial"
+                            ? `${p.plan ?? ""} (initial)`
+                            : `${p.plan ?? ""} (renewal)`}
                     </span>
                     <span className="dots" aria-hidden />
                     <span className="val">

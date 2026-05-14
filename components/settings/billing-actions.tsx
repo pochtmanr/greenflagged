@@ -2,9 +2,9 @@
 
 import * as React from "react";
 
-type Props = { kind: "one_off" };
+type Props = { kind: "payg"; quantity?: number };
 
-export function BillingActions({ kind }: Props) {
+export function BillingActions({ kind, quantity = 1 }: Props) {
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -15,7 +15,7 @@ export function BillingActions({ kind }: Props) {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind }),
+        body: JSON.stringify({ kind, quantity }),
       });
       const data = (await res.json()) as {
         checkout_url?: string;
@@ -34,6 +34,8 @@ export function BillingActions({ kind }: Props) {
     }
   };
 
+  const totalUsd = (3 * quantity).toFixed(0);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div>
@@ -43,7 +45,9 @@ export function BillingActions({ kind }: Props) {
           onClick={onClick}
           disabled={pending}
         >
-          {pending ? "Redirecting…" : "Buy single scan — €9"}{" "}
+          {pending
+            ? "Redirecting…"
+            : `Buy ${quantity} contract credit${quantity === 1 ? "" : "s"} — $${totalUsd}`}{" "}
           <span className="arrow">→</span>
         </button>
       </div>

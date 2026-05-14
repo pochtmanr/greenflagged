@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { guardQuota } from "@/lib/billing/guard";
 import { getIndustry } from "@/lib/contracts";
 import { renderContractPdf } from "@/lib/pdf/render";
 import { isContractStyle, type ContractStyle } from "@/lib/pdf/themes";
@@ -44,6 +45,9 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { blocked } = await guardQuota(user.id, "draft");
+  if (blocked) return blocked;
 
   let bodyMd: string;
   let title: string;

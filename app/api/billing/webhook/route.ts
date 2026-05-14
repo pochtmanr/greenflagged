@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseServiceRole } from "@/lib/supabase/server";
 import type { Json, PlanId } from "@/lib/supabase/types";
-import { PLANS, ONE_OFF, periodLengthDays } from "@/lib/billing/plans";
+import { PAYG, PLANS, periodLengthDays } from "@/lib/billing/plans";
 import { retrieveOrder, verifyWebhookSignature } from "@/lib/billing/revolut";
 
 export const runtime = "nodejs";
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   // Look up the pending payment row we created at checkout time.
   const { data: payment } = await service
     .from("payments")
-    .select("id, user_id, kind, plan, amount_cents, currency")
+    .select("id, user_id, kind, plan, amount_cents, currency, raw")
     .eq("revolut_order_id", event.order_id)
     .maybeSingle();
   if (!payment) {
@@ -93,15 +93,29 @@ export async function POST(req: NextRequest) {
       .eq("id", payment.id);
 
     if (payment.kind === "one_off") {
+      // PAYG: `one_off` is the legacy metadata kind we kept on the Revolut
+      // side. Treat it as a PAYG credit purchase — N contract credits valid
+      // for PAYG.ttl_days (default 90). Quantity rides in raw.quantity (set
+      // at checkout time) and falls back to 1 for older orders.
+      const rawObj =
+        payment.raw && typeof payment.raw === "object"
+          ? (payment.raw as Record<string, unknown>)
+          : null;
+      const rawQty =
+        rawObj && typeof rawObj.quantity === "number"
+          ? rawObj.quantity
+          : rawObj && typeof rawObj.quantity === "string"
+            ? Number.parseInt(rawObj.quantity, 10)
+            : NaN;
+      const quantity = Number.isFinite(rawQty) && rawQty > 0 ? rawQty : 1;
       const expiresAt = new Date(
-        Date.now() + ONE_OFF.ttl_days * 24 * 60 * 60 * 1000,
+        Date.now() + PAYG.ttl_days * 24 * 60 * 60 * 1000,
       ).toISOString();
       await service.from("credits").insert({
         user_id: payment.user_id,
-        scans_remaining: ONE_OFF.scans,
-        drafts_remaining: ONE_OFF.drafts,
+        contracts_remaining: PAYG.contracts * quantity,
         expires_at: expiresAt,
-        source: ONE_OFF.source,
+        source: PAYG.source,
       });
     } else if (
       payment.kind === "subscription_initial" ||

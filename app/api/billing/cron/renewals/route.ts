@@ -91,6 +91,7 @@ export async function GET(req: NextRequest) {
         amount_cents: plan.price_cents,
         currency: plan.currency,
         status: "pending",
+        provider: "revolut",
         raw: { idempotency_key, scheduled_order_id: orderId } as Json,
       })
       .select("id")

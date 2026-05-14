@@ -1,8 +1,6 @@
 type Props = {
-  scans: number;
-  drafts: number;
-  scanLimit?: number;
-  draftLimit?: number;
+  contracts: number;
+  contractLimit?: number;
   planLabel?: string;
 };
 
@@ -12,10 +10,8 @@ function fmtRow(used: number, limit: number): string {
 }
 
 export function UsageMeter({
-  scans,
-  drafts,
-  scanLimit = 1,
-  draftLimit = Number.POSITIVE_INFINITY,
+  contracts,
+  contractLimit = 1,
   planLabel = "Free tier",
 }: Props) {
   return (
@@ -38,14 +34,9 @@ export function UsageMeter({
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div className="gf-specrow">
-          <span className="key">Scans</span>
+          <span className="key">Contracts</span>
           <span className="dots" aria-hidden />
-          <span className="val">{fmtRow(scans, scanLimit)}</span>
-        </div>
-        <div className="gf-specrow">
-          <span className="key">Drafts</span>
-          <span className="dots" aria-hidden />
-          <span className="val">{fmtRow(drafts, draftLimit)}</span>
+          <span className="val">{fmtRow(contracts, contractLimit)}</span>
         </div>
       </div>
     </div>

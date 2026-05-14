@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { reviewContract } from "@/lib/ai/review";
+import { guardQuota } from "@/lib/billing/guard";
 import { extensionFor, extractContractText, truncate } from "@/lib/parse";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
@@ -90,6 +91,9 @@ export async function POST(req: Request) {
   if (userError || !user) {
     return bad("Sign in required", 401, "unauthenticated");
   }
+
+  const { blocked } = await guardQuota(user.id, "scan");
+  if (blocked) return blocked;
 
   const payload = await readPayload(req);
   if ("error" in payload) return payload.error;

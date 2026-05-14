@@ -1,88 +1,53 @@
 import type { PlanId } from "@/lib/supabase/types";
 
-export type PlanInterval = "month" | "year" | "once";
+export type PlanInterval = "month" | "once";
 
 export type Plan = {
   id: PlanId;
   label: string;
-  family: "free" | "freelancer" | "pro";
-  scans: number;
-  drafts: number;
+  family: "free" | "standard";
+  contracts: number;
   seats: number;
   price_cents: number;
-  currency: "EUR";
+  overage_price_cents: number | null;
+  currency: "USD";
   interval: PlanInterval;
 };
 
-// `scans`/`drafts` use Number.POSITIVE_INFINITY for unlimited tiers.
-// `Math.max` and arithmetic both behave correctly with Infinity.
 export const PLANS: Record<PlanId, Plan> = {
   free: {
     id: "free",
     label: "Free",
     family: "free",
-    scans: 1,
-    drafts: Number.POSITIVE_INFINITY,
+    contracts: 1,
     seats: 1,
     price_cents: 0,
-    currency: "EUR",
+    overage_price_cents: null,
+    currency: "USD",
     interval: "month",
   },
-  freelancer_monthly: {
-    id: "freelancer_monthly",
-    label: "Freelancer",
-    family: "freelancer",
-    scans: 25,
-    drafts: 25,
+  standard: {
+    id: "standard",
+    label: "Standard",
+    family: "standard",
+    contracts: 10,
     seats: 1,
-    price_cents: 1500,
-    currency: "EUR",
+    price_cents: 2500,
+    overage_price_cents: 300,
+    currency: "USD",
     interval: "month",
-  },
-  freelancer_yearly: {
-    id: "freelancer_yearly",
-    label: "Freelancer",
-    family: "freelancer",
-    scans: 25,
-    drafts: 25,
-    seats: 1,
-    price_cents: 15000,
-    currency: "EUR",
-    interval: "year",
-  },
-  pro_monthly: {
-    id: "pro_monthly",
-    label: "Pro",
-    family: "pro",
-    scans: Number.POSITIVE_INFINITY,
-    drafts: Number.POSITIVE_INFINITY,
-    seats: 3,
-    price_cents: 3900,
-    currency: "EUR",
-    interval: "month",
-  },
-  pro_yearly: {
-    id: "pro_yearly",
-    label: "Pro",
-    family: "pro",
-    scans: Number.POSITIVE_INFINITY,
-    drafts: Number.POSITIVE_INFINITY,
-    seats: 3,
-    price_cents: 39000,
-    currency: "EUR",
-    interval: "year",
   },
 };
 
-// €9 one-off pack: +1 scan + 1 draft, valid 7 days.
-export const ONE_OFF = {
-  price_cents: 900,
-  currency: "EUR" as const,
-  scans: 1,
-  drafts: 1,
-  ttl_days: 7,
-  source: "one_off_9eur" as const,
-  label: "Single scan + draft (€9)",
+// Pay-as-you-go: $3 buys 1 contract credit valid for 90 days.
+// Bought via card (Revolut) or crypto (OxaPay). Not a subscription.
+export const PAYG = {
+  price_cents: 300,
+  currency: "USD" as const,
+  contracts: 1,
+  ttl_days: 90,
+  source: "payg_3usd" as const,
+  label: "Pay-as-you-go ($3)",
 };
 
 export function isUnlimited(n: number): boolean {
@@ -94,12 +59,5 @@ export function isPaidPlan(planId: PlanId): boolean {
 }
 
 export function periodLengthDays(interval: PlanInterval): number {
-  switch (interval) {
-    case "year":
-      return 365;
-    case "month":
-      return 30;
-    case "once":
-      return 0;
-  }
+  return interval === "month" ? 30 : 0;
 }

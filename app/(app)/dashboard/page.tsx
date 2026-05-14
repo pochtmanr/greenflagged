@@ -40,8 +40,7 @@ export default async function DashboardPage() {
   const [
     profileRes,
     contractsRes,
-    scanCountRes,
-    draftCountRes,
+    contractsCountRes,
     eventsRes,
     subRes,
   ] = await Promise.all([
@@ -56,13 +55,7 @@ export default async function DashboardPage() {
         .from("usage_events")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .eq("kind", "scan")
-        .gte("created_at", monthStartIso),
-      supabase
-        .from("usage_events")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("kind", "draft")
+        .in("kind", ["scan", "draft"])
         .gte("created_at", monthStartIso),
       supabase
         .from("usage_events")
@@ -79,8 +72,7 @@ export default async function DashboardPage() {
 
   const profile = profileRes.data;
   const contracts = contractsRes.data ?? [];
-  const scanCount = scanCountRes.count ?? 0;
-  const draftCount = draftCountRes.count ?? 0;
+  const contractCount = contractsCountRes.count ?? 0;
   const events = eventsRes.data ?? [];
 
   const sub = subRes.data;
@@ -112,10 +104,8 @@ export default async function DashboardPage() {
             className="dashboard__grid"
           >
             <UsageMeter
-              scans={scanCount}
-              drafts={draftCount}
-              scanLimit={plan.scans}
-              draftLimit={plan.drafts}
+              contracts={contractCount}
+              contractLimit={plan.contracts}
               planLabel={`${plan.label} tier`}
             />
             <ActivityFeed events={events} />

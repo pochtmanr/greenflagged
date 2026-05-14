@@ -5,7 +5,7 @@ import {
   getSupabaseServiceRole,
 } from "@/lib/supabase/server";
 import type { Json, PlanId } from "@/lib/supabase/types";
-import { ONE_OFF, PLANS } from "@/lib/billing/plans";
+import { PAYG, PLANS } from "@/lib/billing/plans";
 import { createOrder } from "@/lib/billing/revolut";
 
 export const runtime = "nodejs";
@@ -13,19 +13,17 @@ export const runtime = "nodejs";
 // external APIs.
 export const dynamic = "force-dynamic";
 
-const PLAN_IDS = [
-  "freelancer_monthly",
-  "freelancer_yearly",
-  "pro_monthly",
-  "pro_yearly",
-] as const satisfies readonly PlanId[];
+const PLAN_IDS = ["standard"] as const satisfies readonly PlanId[];
 
 const Body = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("subscription"),
     plan: z.enum(PLAN_IDS),
   }),
-  z.object({ kind: z.literal("one_off") }),
+  z.object({
+    kind: z.literal("payg"),
+    quantity: z.number().int().min(1).max(20).optional(),
+  }),
 ]);
 
 export async function POST(req: NextRequest) {
@@ -50,39 +48,43 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const isSubscription = payload.kind === "subscription";
   const planId: PlanId | null =
     payload.kind === "subscription" ? payload.plan : null;
+  const quantity =
+    payload.kind === "payg" ? (payload.quantity ?? 1) : 1;
+  const isSubscription = payload.kind === "subscription";
 
   const amount_cents = planId
     ? PLANS[planId].price_cents
-    : ONE_OFF.price_cents;
-  const currency = planId ? PLANS[planId].currency : ONE_OFF.currency;
+    : PAYG.price_cents * quantity;
+  const currency: "USD" = planId ? PLANS[planId].currency : PAYG.currency;
   const description = planId
     ? `Green Flagged ${PLANS[planId].label} (${PLANS[planId].interval})`
-    : `Green Flagged ${ONE_OFF.label}`;
+    : `${quantity} contract credit${quantity === 1 ? "" : "s"} — Green Flagged`;
 
   const origin = req.nextUrl.origin;
   const redirect_url = `${origin}/settings/billing?from=checkout`;
 
-  // Create the Revolut order. `save_payment_method_for_merchant` is only
-  // requested for subscriptions, so renewals can re-charge off-session.
+  // Create the Revolut order. `save_payment_method_for_merchant` is true for
+  // both subscriptions (renewals) and PAYG (so the same saved card can later
+  // cover Standard overages — prompt12 wires the MIT charge).
   const order = await createOrder({
     amount_cents,
     currency,
     description,
     customer_email: user.email,
     redirect_url,
-    save_payment_method_for_merchant: isSubscription,
+    save_payment_method_for_merchant: true,
     metadata: {
       user_id: user.id,
       kind: isSubscription ? "subscription_initial" : "one_off",
       plan: planId ?? "",
+      quantity: String(quantity),
     },
   });
 
   // Audit row — webhook will flip the status to succeeded on ORDER_COMPLETED.
-  const service = await getSupabaseServiceRole();
+  const service = getSupabaseServiceRole();
   const { error: insertErr } = await service.from("payments").insert({
     user_id: user.id,
     revolut_order_id: order.id,
@@ -91,7 +93,8 @@ export async function POST(req: NextRequest) {
     amount_cents,
     currency,
     status: "pending",
-    raw: { order: order as unknown } as Json,
+    provider: "revolut",
+    raw: { order: order as unknown, quantity } as Json,
   });
   if (insertErr) {
     return NextResponse.json(
