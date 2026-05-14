@@ -1,18 +1,28 @@
 import { SectionHeading } from "@/components/marketing/section-heading";
+import { ClauseCell } from "@/components/marketing/clause-cell";
+import type { LandingArtKey } from "@/lib/landing/images";
 
-const CATEGORIES = [
+const CATEGORIES: Array<{
+  id: string;
+  n: string;
+  title: string;
+  ex: string;
+  art: LandingArtKey;
+}> = [
   {
     id: "payment",
     n: "01",
     title: "Payment",
     ex:
       "Net-90 with no late fee, paid only on client's acceptance — money sits with them for months.",
+    art: "path",
   },
   {
     id: "scope",
     n: "02",
     title: "Scope",
     ex: "\"Reasonable revisions\" with no cap. Unbounded scope = unbounded unpaid work.",
+    art: "tower",
   },
   {
     id: "ip",
@@ -20,6 +30,7 @@ const CATEGORIES = [
     title: "IP transfer",
     ex:
       "All your prior work and tools become the client's property the moment you deliver.",
+    art: "figureRed",
   },
   {
     id: "restrict",
@@ -27,6 +38,7 @@ const CATEGORIES = [
     title: "Restrictions",
     ex:
       "12-month non-compete covering an entire industry — likely unenforceable but a leverage tool.",
+    art: "deerForest",
   },
   {
     id: "liability",
@@ -34,6 +46,7 @@ const CATEGORIES = [
     title: "Liability",
     ex:
       "Uncapped indemnification for any third-party claim, including ones outside your control.",
+    art: "reflection",
   },
   {
     id: "termination",
@@ -41,6 +54,7 @@ const CATEGORIES = [
     title: "Termination",
     ex:
       "Client can terminate \"for convenience\" with 7 days' notice; you owe a 30-day notice penalty.",
+    art: "gateway",
   },
   {
     id: "dispute",
@@ -48,6 +62,7 @@ const CATEGORIES = [
     title: "Dispute resolution",
     ex:
       "Mandatory arbitration in a jurisdiction 4,000 miles away, with their choice of arbitrator.",
+    art: "viewpoint",
   },
   {
     id: "amendments",
@@ -55,6 +70,7 @@ const CATEGORIES = [
     title: "Amendments",
     ex:
       "\"Schedule may be amended in writing by Client\" — they can rewrite the deal unilaterally.",
+    art: "deerClearing",
   },
 ];
 
@@ -68,14 +84,16 @@ export function ClauseGrid() {
           sub="Each clause is scored against the same eight risk dimensions a senior contracts lawyer would check."
         />
         <div className="clause-grid">
-          {CATEGORIES.map((c) => (
-            <div key={c.id} className="gf-card clause-cell">
-              <span className="gf-label clause-cell__n">
-                {c.n} / {c.id.toUpperCase()}
-              </span>
-              <h4 className="gf-h4 clause-cell__title">{c.title}</h4>
-              <p className="gf-body-sm">{c.ex}</p>
-            </div>
+          {CATEGORIES.map((c, i) => (
+            <ClauseCell
+              key={c.id}
+              n={c.n}
+              id={c.id}
+              title={c.title}
+              example={c.ex}
+              art={c.art}
+              index={i}
+            />
           ))}
         </div>
       </div>

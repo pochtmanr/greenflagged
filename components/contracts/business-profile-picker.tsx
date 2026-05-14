@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Dropdown } from "@/components/ui/dropdown";
 import type { AddressValue, NameValue } from "@/lib/contracts/types";
 
 export type SavedBusinessProfile = {
@@ -19,6 +20,8 @@ export type SavedBusinessProfile = {
 type Props = {
   profiles: SavedBusinessProfile[];
   onPick: (name: NameValue, addr: AddressValue) => void;
+  selectedId?: string | null;
+  onSelectedIdChange?: (id: string | null) => void;
 };
 
 function profileLabel(p: SavedBusinessProfile): string {
@@ -28,8 +31,37 @@ function profileLabel(p: SavedBusinessProfile): string {
   return p.business_name || personal || "Unnamed profile";
 }
 
-export function BusinessProfilePicker({ profiles, onPick }: Props) {
+export function BusinessProfilePicker({
+  profiles,
+  onPick,
+  selectedId,
+  onSelectedIdChange,
+}: Props) {
+  const [internalId, setInternalId] = React.useState<string | null>(null);
+  const id = selectedId !== undefined ? selectedId : internalId;
+
   if (profiles.length === 0) return null;
+
+  const handleChange = (nextId: string) => {
+    const p = profiles.find((x) => x.id === nextId);
+    if (!p) return;
+    if (onSelectedIdChange) onSelectedIdChange(nextId);
+    else setInternalId(nextId);
+    onPick(
+      {
+        first: p.first_name ?? "",
+        family: p.family_name ?? "",
+        business: p.business_name ?? "",
+      },
+      {
+        country: p.country_code ?? "",
+        city: p.city ?? "",
+        street: p.street ?? "",
+        postal: p.postal_code ?? "",
+      },
+    );
+  };
+
   return (
     <div
       style={{
@@ -49,37 +81,17 @@ export function BusinessProfilePicker({ profiles, onPick }: Props) {
       >
         {"// Saved profiles"}
       </span>
-      <select
-        className="gf-input"
-        defaultValue=""
-        style={{ appearance: "auto" }}
-        onChange={(e) => {
-          const p = profiles.find((x) => x.id === e.target.value);
-          if (!p) return;
-          onPick(
-            {
-              first: p.first_name ?? "",
-              family: p.family_name ?? "",
-              business: p.business_name ?? "",
-            },
-            {
-              country: p.country_code ?? "",
-              city: p.city ?? "",
-              street: p.street ?? "",
-              postal: p.postal_code ?? "",
-            },
-          );
-          e.currentTarget.value = "";
-        }}
-      >
-        <option value="">Select an existing profile…</option>
-        {profiles.map((p) => (
-          <option key={p.id} value={p.id}>
-            {profileLabel(p)}
-            {p.is_default ? " (default)" : ""}
-          </option>
-        ))}
-      </select>
+      <Dropdown
+        value={id}
+        onChange={handleChange}
+        options={profiles.map((p) => ({
+          value: p.id,
+          label: profileLabel(p),
+          hint: p.is_default ? "Default" : undefined,
+        }))}
+        placeholder="Select an existing profile…"
+        aria-label="Saved business profiles"
+      />
     </div>
   );
 }

@@ -1,12 +1,11 @@
 // Contract style tokens — typography / accent / layout / logo placement.
 // Compose these 4 dimensions and resolve to a token bundle the PDF and
-// DOCX renderers can consume. 81 combinations come "free" because we
-// compose at render time instead of duplicating code per combo.
+// DOCX renderers can consume.
 
 export type Typography = "editorial" | "modern" | "classic";
-export type Accent = "sage" | "ink" | "brand";
+export type Accent = "ink" | "brand";
 export type Layout = "single" | "two-column" | "cover";
-export type LogoPlacement = "header" | "footer" | "cover" | "none";
+export type LogoPlacement = "header" | "header_with_info" | "cover" | "none";
 
 export type ContractStyle = {
   typography: Typography;
@@ -18,7 +17,7 @@ export type ContractStyle = {
 
 export const DEFAULT_STYLE: ContractStyle = {
   typography: "editorial",
-  accent: "sage",
+  accent: "ink",
   layout: "single",
   logo_placement: "header",
 };
@@ -40,8 +39,6 @@ export type ResolvedStyle = {
 };
 
 // @react-pdf bundles Helvetica / Times-Roman / Courier without registration.
-// Inter would require Font.register(). For now we keep it safe with built-ins;
-// "editorial" maps to Helvetica + bold variant for headings to read close to Inter.
 const FONTS: Record<Typography, ResolvedFonts> = {
   editorial: {
     heading: "Helvetica-Bold",
@@ -76,21 +73,16 @@ export const DOCX_FONTS: Record<Typography, { heading: string; body: string; mon
   classic: { heading: "Times New Roman", body: "Times New Roman", mono: "Courier New" },
 };
 
-const ACCENTS: Record<"sage" | "ink", string> = {
-  sage: "#4A7A5C",
-  ink: "#0E110F",
-};
+const INK_HEX = "#0E110F";
 
 export function resolveStyle(s: ContractStyle): ResolvedStyle {
   const accent =
-    s.accent === "brand"
-      ? normalizeHex(s.brand_color) ?? ACCENTS.sage
-      : ACCENTS[s.accent];
+    s.accent === "brand" ? (normalizeHex(s.brand_color) ?? INK_HEX) : INK_HEX;
 
   return {
     fonts: FONTS[s.typography],
     colors: {
-      ink: "#0E110F",
+      ink: INK_HEX,
       accent,
       muted: "#6B7280",
       rule: "#D9D5C7",
@@ -113,32 +105,62 @@ function normalizeHex(value: string | undefined): string | null {
   return null;
 }
 
+function isTypography(x: unknown): x is Typography {
+  return x === "editorial" || x === "modern" || x === "classic";
+}
+
+function isLayout(x: unknown): x is Layout {
+  return x === "single" || x === "two-column" || x === "cover";
+}
+
 export function isContractStyle(x: unknown): x is ContractStyle {
   if (!x || typeof x !== "object") return false;
   const o = x as Record<string, unknown>;
   return (
-    (o.typography === "editorial" || o.typography === "modern" || o.typography === "classic") &&
-    (o.accent === "sage" || o.accent === "ink" || o.accent === "brand") &&
-    (o.layout === "single" || o.layout === "two-column" || o.layout === "cover") &&
+    isTypography(o.typography) &&
+    (o.accent === "ink" || o.accent === "brand") &&
+    isLayout(o.layout) &&
     (o.logo_placement === "header" ||
-      o.logo_placement === "footer" ||
+      o.logo_placement === "header_with_info" ||
       o.logo_placement === "cover" ||
       o.logo_placement === "none")
   );
 }
 
+// Coerces older persisted styles into the new shape. Sage → ink, footer → none.
 export function coerceStyle(x: unknown): ContractStyle {
-  if (isContractStyle(x)) {
-    const out: ContractStyle = {
-      typography: x.typography,
-      accent: x.accent,
-      layout: x.layout,
-      logo_placement: x.logo_placement,
-    };
-    if (x.accent === "brand" && typeof x.brand_color === "string") {
-      out.brand_color = x.brand_color;
-    }
-    return out;
+  if (!x || typeof x !== "object") return { ...DEFAULT_STYLE };
+  const o = x as Record<string, unknown>;
+
+  const typography: Typography = isTypography(o.typography)
+    ? o.typography
+    : DEFAULT_STYLE.typography;
+
+  let accent: Accent;
+  if (o.accent === "brand") accent = "brand";
+  else if (o.accent === "ink") accent = "ink";
+  else accent = "ink"; // sage / unknown collapse to ink
+
+  const layout: Layout = isLayout(o.layout) ? o.layout : DEFAULT_STYLE.layout;
+
+  let logo_placement: LogoPlacement;
+  if (
+    o.logo_placement === "header" ||
+    o.logo_placement === "header_with_info" ||
+    o.logo_placement === "cover" ||
+    o.logo_placement === "none"
+  ) {
+    logo_placement = o.logo_placement;
+  } else if (o.logo_placement === "footer") {
+    logo_placement = "none"; // footer retired
+  } else {
+    logo_placement = DEFAULT_STYLE.logo_placement;
   }
-  return { ...DEFAULT_STYLE };
+
+  const out: ContractStyle = { typography, accent, layout, logo_placement };
+  if (accent === "brand" && typeof o.brand_color === "string") {
+    const norm = normalizeHex(o.brand_color);
+    if (norm) out.brand_color = norm;
+  }
+  return out;
 }

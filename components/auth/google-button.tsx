@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { authCallbackUrl } from "@/lib/site-url";
 
 type Props = {
   redirectTo?: string;
@@ -17,7 +18,7 @@ export function GoogleButton({ redirectTo, label = "Continue with Google" }: Pro
     setError(null);
     const supabase = getSupabaseBrowser();
     const next = redirectTo ?? "/dashboard";
-    const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+    const callback = authCallbackUrl(next);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: callback },

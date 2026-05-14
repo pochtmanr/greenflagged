@@ -120,7 +120,7 @@ export default async function ContractPage({ params }: Props) {
             ← Back to dashboard
           </Link>
 
-          <header style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <header style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <span
               className="gf-label"
               style={{ color: "var(--accent-strong)" }}
@@ -128,12 +128,14 @@ export default async function ContractPage({ params }: Props) {
               // {contract.kind.toUpperCase()}
               {contract.industry ? ` · ${contract.industry.toUpperCase()}` : ""}
             </span>
-            <h1 className="gf-h1">{contract.title ?? "Untitled contract"}</h1>
+            <h1 className="gf-h3" style={{ margin: 0 }}>
+              {contract.title ?? "Untitled contract"}
+            </h1>
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 12,
+                gap: 10,
                 flexWrap: "wrap",
               }}
             >
@@ -145,15 +147,6 @@ export default async function ContractPage({ params }: Props) {
                 {versionCount} version{versionCount === 1 ? "" : "s"} ·{" "}
                 {formatDate(contract.created_at)}
               </span>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                flexWrap: "wrap",
-              }}
-            >
               {styleTagParts.map((part) => (
                 <span key={part} className="gf-tag">
                   {part}

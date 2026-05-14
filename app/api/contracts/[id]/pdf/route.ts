@@ -10,10 +10,12 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const url = new URL(req.url);
+  const asDownload = url.searchParams.get("download") === "1";
 
   const supabase = await getSupabaseServer();
   const {
@@ -72,11 +74,12 @@ export async function GET(
   }
 
   const filename = sanitizeFilename(contract.title ?? "contract") + ".pdf";
+  const disposition = asDownload ? "attachment" : "inline";
   return new NextResponse(new Uint8Array(pdf), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `${disposition}; filename="${filename}"`,
       "Cache-Control": "private, no-store",
     },
   });

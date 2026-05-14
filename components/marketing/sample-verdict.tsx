@@ -1,4 +1,5 @@
 import { SectionHeading } from "@/components/marketing/section-heading";
+import { Reveal } from "@/components/marketing/reveal";
 
 type Severity = "red" | "orange" | "yellow" | "green";
 
@@ -54,9 +55,10 @@ export function SampleVerdict() {
         />
 
         <div className="verdict">
-          <div className="verdict__doc gf-frame">
+          <Reveal as="div" className="verdict__doc gf-frame verdict__doc--scan">
             <span className="gf-frame-bl" />
             <span className="gf-frame-br" />
+            <span className="verdict__scanline" aria-hidden />
             <div className="verdict__doc-head">
               <span className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
                 Freelance_Agreement_2026.pdf
@@ -67,17 +69,26 @@ export function SampleVerdict() {
             </div>
             <div className="verdict__clauses">
               {ANNOTATIONS.map((a, i) => (
-                <p key={i} className={"verdict__clause v-" + a.sev}>
+                <p
+                  key={i}
+                  className={"verdict__clause v-" + a.sev}
+                  style={{ "--clause-i": i } as React.CSSProperties}
+                >
                   <span className="verdict__sec">{SEV_SECTION[i]}</span>
                   {a.clause}
                 </p>
               ))}
             </div>
-          </div>
+          </Reveal>
 
           <div className="verdict__notes">
             {ANNOTATIONS.map((a, i) => (
-              <div key={i} className="gf-card verdict__note">
+              <Reveal
+                key={i}
+                as="div"
+                className="gf-card verdict__note"
+                delayMs={i * 70 + 120}
+              >
                 <span className={"gf-tag sev-" + a.sev}>{SEV_LABEL[a.sev]}</span>
                 <p
                   className="gf-mono"
@@ -86,12 +97,12 @@ export function SampleVerdict() {
                   &ldquo;{a.clause}&rdquo;
                 </p>
                 <p className="gf-body-sm">{a.note}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
 
-        <div className="verdict-final">
+        <Reveal as="div" className="verdict-final">
           <div>
             <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
               // FINAL VERDICT
@@ -108,7 +119,7 @@ export function SampleVerdict() {
             about to sign blind. The IP transfer clause alone would have wiped
             out their portfolio.&rdquo;
           </p>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

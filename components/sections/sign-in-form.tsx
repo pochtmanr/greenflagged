@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { GoogleButton } from "@/components/auth/google-button";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { authCallbackUrl } from "@/lib/site-url";
 
 type Mode = "sign-in" | "sign-up";
 type Phase = "idle" | "submitting" | "sent";
@@ -37,9 +38,7 @@ export function SignInForm({ defaultMode = "sign-in" }: Props) {
 
     try {
       if (isSignUp) {
-        const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-          redirectParam
-        )}`;
+        const callback = authCallbackUrl(redirectParam);
         const { data, error } = await supabase.auth.signUp({
           email,
           password,

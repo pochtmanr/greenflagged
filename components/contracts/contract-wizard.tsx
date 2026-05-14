@@ -7,23 +7,21 @@ import { toast } from "sonner";
 import { INDUSTRY_META, type IndustryMeta } from "@/lib/contracts/manifest";
 import type {
   AddressValue,
+  IpSharedValue,
   NameValue,
   Question,
 } from "@/lib/contracts/types";
 import { COUNTRIES } from "@/lib/countries";
 import { MarkdownPreview } from "@/lib/markdown/render-react";
-import { DEFAULT_STYLE, type ContractStyle } from "@/lib/pdf/themes";
+import type { StyleSidebarProfile } from "./style-sidebar";
 import { QuestionField } from "./question-field";
-import {
-  ClientPicker,
-  type SavedClient,
-} from "./client-picker";
+import { ClientPicker, type SavedClient } from "./client-picker";
 import {
   BusinessProfilePicker,
   type SavedBusinessProfile,
 } from "./business-profile-picker";
-import { StyleSidebar, type StyleSidebarProfile } from "./style-sidebar";
-import { StyledMarkdown } from "./styled-markdown";
+import { DEFAULT_IP_SHARED, IpSharedFields } from "./ip-shared-fields";
+import { JurisdictionRiderToggle } from "./jurisdiction-rider-toggle";
 
 export type StyleProfileOption = StyleSidebarProfile & {
   business_name: string | null;
@@ -60,8 +58,12 @@ type Mode =
   | { kind: "picker" }
   | { kind: "wizard"; meta: IndustryMeta; step: number }
   | { kind: "custom" }
-  | { kind: "streaming"; industry: string; description: string; jurisdiction: string }
-  | { kind: "preview"; industry: string; bodyMd: string; title: string; answers?: Record<string, unknown> };
+  | {
+      kind: "streaming";
+      industry: string;
+      description: string;
+      jurisdiction: string;
+    };
 
 type Defaults = {
   provider?: NameValue | null;
@@ -73,6 +75,8 @@ type Props = {
   defaults?: Defaults;
   clients?: SavedClient[];
   businessProfiles?: SavedBusinessProfile[];
+  /** Kept on the prop signature for compatibility with the new-contract
+   *  page even though wizard no longer renders the style sidebar. */
   styleProfiles?: StyleProfileOption[];
 };
 
@@ -115,7 +119,6 @@ function defaultAnswers(meta: IndustryMeta, defaults: Defaults | undefined) {
       out[q.id] = q.defaultValue ?? [];
     }
   }
-  // Default business_profile (if any) wins over plain profile.business_name.
   if (defaults?.provider && meta.questions.some((q) => q.id === "provider")) {
     out.provider = { ...defaults.provider };
   }
@@ -174,11 +177,21 @@ function isQuestionAnswered(q: Question, value: unknown): boolean {
   return true;
 }
 
+function isIpSharedComplete(value: unknown): boolean {
+  const v = value as IpSharedValue | undefined;
+  if (!v) return false;
+  const additionalNamed = v.additional.every((p) => p.name.trim().length > 0);
+  const total =
+    v.provider_pct +
+    v.client_pct +
+    v.additional.reduce((s, p) => s + p.pct, 0);
+  return additionalNamed && total === 100;
+}
+
 export function ContractWizard({
   defaults,
   clients = [],
   businessProfiles = [],
-  styleProfiles = [],
 }: Props) {
   const router = useRouter();
   const [mode, setMode] = React.useState<Mode>({ kind: "picker" });
@@ -187,19 +200,12 @@ export function ContractWizard({
   const [submitting, setSubmitting] = React.useState(false);
   const [saveClient, setSaveClient] = React.useState(false);
   const [saveProvider, setSaveProvider] = React.useState(false);
-
-  // Phase 10 — style + business-profile selection lives in the wizard so
-  // it's baked into the contract at save time (no extra hop to the editor).
-  const defaultStyleProfileId =
-    styleProfiles.find((p) => p.is_default)?.id ??
-    styleProfiles[0]?.id ??
-    null;
-  const [chosenStyle, setChosenStyle] = React.useState<ContractStyle>(
-    DEFAULT_STYLE,
+  const [selectedClientId, setSelectedClientId] = React.useState<string | null>(
+    null,
   );
-  const [chosenProfileId, setChosenProfileId] = React.useState<string | null>(
-    defaultStyleProfileId,
-  );
+  const [selectedProviderId, setSelectedProviderId] = React.useState<
+    string | null
+  >(null);
 
   // custom-mode form state
   const [customIndustry, setCustomIndustry] = React.useState("");
@@ -218,6 +224,8 @@ export function ContractWizard({
     setAnswers(defaultAnswers(opt.meta, defaults));
     setSaveClient(false);
     setSaveProvider(false);
+    setSelectedClientId(null);
+    setSelectedProviderId(null);
     setMode({ kind: "wizard", meta: opt.meta, step: 0 });
   };
 
@@ -225,6 +233,8 @@ export function ContractWizard({
     setAnswers({});
     setSaveClient(false);
     setSaveProvider(false);
+    setSelectedClientId(null);
+    setSelectedProviderId(null);
     setError(null);
     setMode({ kind: "picker" });
   };
@@ -234,14 +244,19 @@ export function ContractWizard({
     return (
       <section className="section" style={{ paddingTop: 64 }}>
         <div className="app-shell">
-          <div className="content--reading" style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-            <header style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+            <header
+              style={{ display: "flex", flexDirection: "column", gap: 12 }}
+            >
               <span className="gf-label">// NEW CONTRACT</span>
               <h1 className="gf-h1">Pick a starting point.</h1>
-              <p className="gf-body" style={{ color: "var(--fg-2)", maxWidth: 640 }}>
-                Choose a template that matches the engagement. Each one walks you
-                through a few questions, then drafts a clean, plain-language
-                contract you can negotiate from.
+              <p
+                className="gf-body"
+                style={{ color: "var(--fg-2)", maxWidth: 640 }}
+              >
+                Choose a template that matches the engagement. Each one walks
+                you through a few questions, then drafts a clean,
+                plain-language contract you can refine and style.
               </p>
             </header>
 
@@ -255,24 +270,43 @@ export function ContractWizard({
                 >
                   <span className="gf-frame-bl" />
                   <span className="gf-frame-br" />
-                  <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
+                  <span
+                    className="gf-label"
+                    style={{ color: "var(--accent-strong)" }}
+                  >
                     {opt.eyebrow}
                   </span>
-                  <h3 className="gf-h3" style={{ textAlign: "left" }}>{opt.label}</h3>
-                  <p className="gf-body-sm" style={{ color: "var(--fg-2)", textAlign: "left", margin: 0 }}>
+                  <h3 className="gf-h3" style={{ textAlign: "left" }}>
+                    {opt.label}
+                  </h3>
+                  <p
+                    className="gf-body-sm"
+                    style={{
+                      color: "var(--fg-2)",
+                      textAlign: "left",
+                      margin: 0,
+                    }}
+                  >
                     {opt.description}
                   </p>
-                  <span
-                    className="gf-mono-sm"
-                    style={{ color: "var(--fg-1)", marginTop: "auto", textAlign: "left" }}
-                  >
-                    Start <span className="arrow">→</span>
+                  <span className="wizard__card-start">
+                    Start{" "}
+                    <span
+                      className="wizard__card-start-arrow"
+                      aria-hidden
+                    >
+                      →
+                    </span>
                   </span>
                 </button>
               ))}
             </div>
 
-            <Link href="/dashboard" className="gf-btn-link" style={{ alignSelf: "flex-start" }}>
+            <Link
+              href="/dashboard"
+              className="gf-btn-link"
+              style={{ alignSelf: "flex-start" }}
+            >
               ← Back to dashboard
             </Link>
           </div>
@@ -290,12 +324,39 @@ export function ContractWizard({
     const value = answers[question.id];
 
     const onChange = (next: unknown) => {
-      setAnswers((prev) => ({ ...prev, [question.id]: next }));
+      setAnswers((prev) => {
+        const patch: Record<string, unknown> = { [question.id]: next };
+        // When ip_ownership flips to "shared", seed default split so the
+        // user can advance with a valid 50/50 without first touching the
+        // accessory fields.
+        if (
+          question.id === "ip_ownership" &&
+          next === "shared" &&
+          !prev.ip_shared
+        ) {
+          patch.ip_shared = DEFAULT_IP_SHARED();
+        }
+        return { ...prev, ...patch };
+      });
+      setError(null);
+    };
+
+    const onSiblingChange = (key: string, next: unknown) => {
+      setAnswers((prev) => ({ ...prev, [key]: next }));
       setError(null);
     };
 
     const isLast = step === meta.questions.length - 1;
-    const canAdvance = isQuestionAnswered(question, value);
+
+    // Accessory validation: IP shared totals; address/IP combos.
+    let canAdvance = isQuestionAnswered(question, value);
+    if (
+      question.id === "ip_ownership" &&
+      answers.ip_ownership === "shared" &&
+      !isIpSharedComplete(answers.ip_shared)
+    ) {
+      canAdvance = false;
+    }
 
     const onNext = async () => {
       if (!canAdvance) {
@@ -307,13 +368,13 @@ export function ContractWizard({
         return;
       }
       await submitTemplate(meta, answers, {
+        businessProfileId: selectedProviderId,
         setSubmitting,
         setError,
-        onPreview: (bodyMd, title) => {
-          // Fire-and-forget saves after the draft is rendered.
+        onSaved: (contractId) => {
           if (saveClient) firePostClient(answers);
           if (saveProvider) firePostBusinessProfile(answers);
-          setMode({ kind: "preview", industry: meta.id, bodyMd, title, answers });
+          router.push(`/contracts/${contractId}/edit`);
         },
       });
     };
@@ -357,21 +418,37 @@ export function ContractWizard({
       question.id === "receiving_party";
     const showSaveProvider = question.id === "provider";
 
+    const showIpShared =
+      question.id === "ip_ownership" && answers.ip_ownership === "shared";
+    const showCountryRider =
+      question.id === "governing_law" && typeof answers.governing_law === "string";
+
     return (
       <section className="section" style={{ paddingTop: 64 }}>
         <div className="app-shell">
-          <div className="content--prose" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             <header style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
+              <span
+                className="gf-label"
+                style={{ color: "var(--accent-strong)" }}
+              >
                 {meta.eyebrow}
               </span>
-              <h1 className="gf-h2" style={{ marginTop: 0 }}>{meta.label}</h1>
+              <h1 className="gf-h2" style={{ marginTop: 0 }}>
+                {meta.label}
+              </h1>
               <ProgressDots total={meta.questions.length} index={step} />
             </header>
 
             <div
               className="gf-frame"
-              style={{ display: "flex", flexDirection: "column", gap: 20 }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 20,
+                maxWidth: 720,
+                width: "100%",
+              }}
             >
               <span className="gf-frame-bl" />
               <span className="gf-frame-br" />
@@ -380,11 +457,18 @@ export function ContractWizard({
               </span>
 
               {showClientPicker ? (
-                <ClientPicker clients={clients} onPick={onPickClient} />
+                <ClientPicker
+                  clients={clients}
+                  selectedId={selectedClientId}
+                  onSelectedIdChange={setSelectedClientId}
+                  onPick={onPickClient}
+                />
               ) : null}
               {showProviderPicker ? (
                 <BusinessProfilePicker
                   profiles={businessProfiles}
+                  selectedId={selectedProviderId}
+                  onSelectedIdChange={setSelectedProviderId}
                   onPick={onPickProvider}
                 />
               ) : null}
@@ -394,7 +478,34 @@ export function ContractWizard({
                 value={value}
                 onChange={onChange}
                 error={error}
+                allAnswers={answers}
+                onSiblingChange={onSiblingChange}
               />
+
+              {showIpShared ? (
+                <IpSharedFields
+                  value={
+                    (answers.ip_shared as IpSharedValue | undefined) ??
+                    DEFAULT_IP_SHARED()
+                  }
+                  onChange={(next) =>
+                    setAnswers((prev) => ({ ...prev, ip_shared: next }))
+                  }
+                />
+              ) : null}
+
+              {showCountryRider ? (
+                <JurisdictionRiderToggle
+                  code={answers.governing_law as string}
+                  enabled={Boolean(answers.country_rider_on)}
+                  onChange={(enabled) =>
+                    setAnswers((prev) => ({
+                      ...prev,
+                      country_rider_on: enabled,
+                    }))
+                  }
+                />
+              ) : null}
 
               {showSaveClient ? (
                 <label
@@ -442,9 +553,16 @@ export function ContractWizard({
                 justifyContent: "space-between",
                 gap: 16,
                 flexWrap: "wrap",
+                maxWidth: 720,
+                width: "100%",
               }}
             >
-              <button type="button" className="gf-btn-ghost" onClick={onBack} disabled={submitting}>
+              <button
+                type="button"
+                className="gf-btn-ghost"
+                onClick={onBack}
+                disabled={submitting}
+              >
                 ← Back
               </button>
               <button
@@ -453,7 +571,11 @@ export function ContractWizard({
                 onClick={onNext}
                 disabled={submitting}
               >
-                {submitting ? "Drafting…" : isLast ? "Generate draft" : "Next"}{" "}
+                {submitting
+                  ? "Drafting…"
+                  : isLast
+                    ? "Generate draft"
+                    : "Next"}{" "}
                 <span className="arrow">→</span>
               </button>
             </div>
@@ -488,22 +610,21 @@ export function ContractWizard({
     return (
       <section className="section" style={{ paddingTop: 64 }}>
         <div className="app-shell">
-          <div
-            className="content--prose"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 24,
-            }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             <header style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
+              <span
+                className="gf-label"
+                style={{ color: "var(--accent-strong)" }}
+              >
                 // CUSTOM
               </span>
               <h1 className="gf-h2" style={{ marginTop: 0 }}>
                 Describe your own contract
               </h1>
-              <p className="gf-body" style={{ color: "var(--fg-2)", maxWidth: 600 }}>
+              <p
+                className="gf-body"
+                style={{ color: "var(--fg-2)", maxWidth: 600 }}
+              >
                 The AI will draft a tailored contract from your description.
                 Add as much detail as you can — parties, scope, payment, anything
                 that matters.
@@ -512,7 +633,13 @@ export function ContractWizard({
 
             <div
               className="gf-frame"
-              style={{ display: "flex", flexDirection: "column", gap: 20 }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 20,
+                maxWidth: 720,
+                width: "100%",
+              }}
             >
               <span className="gf-frame-bl" />
               <span className="gf-frame-br" />
@@ -612,7 +739,11 @@ export function ContractWizard({
                 flexWrap: "wrap",
               }}
             >
-              <button type="button" className="gf-btn-ghost" onClick={goBackToPicker}>
+              <button
+                type="button"
+                className="gf-btn-ghost"
+                onClick={goBackToPicker}
+              >
                 ← Back
               </button>
               <button
@@ -639,130 +770,28 @@ export function ContractWizard({
         description={mode.description}
         jurisdiction={mode.jurisdiction}
         onAbort={() => setMode({ kind: "custom" })}
-        onComplete={(bodyMd, title) =>
-          setMode({ kind: "preview", industry: mode.industry, bodyMd, title })
-        }
+        onComplete={async (bodyMd, title) => {
+          try {
+            const res = await fetch("/api/contracts/draft", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                industry: mode.industry,
+                body_md: bodyMd,
+                title,
+              }),
+            });
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              throw new Error(data.error ?? `Save failed (${res.status})`);
+            }
+            const data = (await res.json()) as { contract_id: string };
+            router.push(`/contracts/${data.contract_id}/edit`);
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : String(err));
+          }
+        }}
       />
-    );
-  }
-
-  // ────────── PREVIEW ──────────
-  if (mode.kind === "preview") {
-    const selectedProfile =
-      styleProfiles.find((p) => p.id === chosenProfileId) ?? null;
-
-    const onSave = async () => {
-      setSubmitting(true);
-      setError(null);
-      try {
-        const res = await fetch("/api/contracts/draft", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            industry: mode.industry,
-            body_md: mode.bodyMd,
-            title: mode.title,
-            style: chosenStyle,
-            business_profile_id: chosenProfileId,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error ?? `Save failed (${res.status})`);
-        }
-        const data = (await res.json()) as { contract_id: string };
-        router.push(`/contracts/${data.contract_id}/edit`);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-        setSubmitting(false);
-      }
-    };
-
-    const onEditAnswers = () => {
-      if (mode.answers) {
-        const meta = INDUSTRY_META.find((m) => m.id === mode.industry);
-        if (meta) {
-          setAnswers(mode.answers);
-          setMode({ kind: "wizard", meta, step: 0 });
-          return;
-        }
-      }
-      setMode({ kind: "custom" });
-    };
-
-    return (
-      <section className="section" style={{ paddingTop: 64 }}>
-        <div className="app-shell">
-          <div className="wizard-preview__grid">
-            <div style={{ display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
-              <header style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
-                  // PREVIEW
-                </span>
-                <h1 className="gf-h2" style={{ marginTop: 0 }}>
-                  {mode.title}
-                </h1>
-                <p className="gf-body-sm" style={{ color: "var(--fg-3)" }}>
-                  Pick the look on the right — the preview reflows live.
-                  Save once you&apos;re happy.
-                </p>
-              </header>
-
-              <StyledMarkdown
-                body_md={mode.bodyMd}
-                title={mode.title}
-                style={chosenStyle}
-                logoSrc={selectedProfile?.logo_signed_url ?? null}
-                businessName={selectedProfile?.business_name ?? null}
-              />
-
-              {error ? (
-                <p className="gf-mono-sm" style={{ color: "var(--sev-red)" }}>
-                  {error}
-                </p>
-              ) : null}
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: 16,
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                }}
-              >
-                <button
-                  type="button"
-                  className="gf-btn gf-btn-accent"
-                  onClick={onSave}
-                  disabled={submitting}
-                >
-                  {submitting ? "Saving…" : "Save & finish"}{" "}
-                  <span className="arrow">→</span>
-                </button>
-                <button
-                  type="button"
-                  className="gf-btn-ghost"
-                  onClick={onEditAnswers}
-                  disabled={submitting}
-                >
-                  ← Edit answers
-                </button>
-              </div>
-            </div>
-
-            <aside className="wizard-preview__aside">
-              <StyleSidebar
-                value={chosenStyle}
-                onChange={setChosenStyle}
-                profiles={styleProfiles}
-                selectedProfileId={chosenProfileId}
-                onProfileChange={setChosenProfileId}
-              />
-            </aside>
-          </div>
-        </div>
-        <WizardStyles />
-      </section>
     );
   }
 
@@ -771,21 +800,14 @@ export function ContractWizard({
 
 function ProgressDots({ total, index }: { total: number; index: number }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 6,
-        alignItems: "center",
-      }}
-    >
+    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
       {Array.from({ length: total }, (_, i) => (
         <span
           key={i}
           style={{
             width: i === index ? 24 : 8,
             height: 4,
-            background:
-              i <= index ? "var(--accent-strong)" : "var(--rule)",
+            background: i <= index ? "var(--accent-strong)" : "var(--rule)",
             borderRadius: 2,
             transition: "width 200ms ease, background 200ms ease",
           }}
@@ -799,28 +821,32 @@ async function submitTemplate(
   meta: IndustryMeta,
   answers: Record<string, unknown>,
   ctx: {
+    businessProfileId: string | null;
     setSubmitting: (v: boolean) => void;
     setError: (v: string | null) => void;
-    onPreview: (bodyMd: string, title: string) => void;
+    onSaved: (contractId: string) => void;
   },
 ) {
   ctx.setError(null);
   ctx.setSubmitting(true);
   try {
-    const res = await fetch("/api/contracts/draft/preview", {
+    const res = await fetch("/api/contracts/draft", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ industry: meta.id, answers }),
+      body: JSON.stringify({
+        industry: meta.id,
+        answers,
+        business_profile_id: ctx.businessProfileId,
+      }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.error ?? `Render failed (${res.status})`);
+      throw new Error(data.error ?? `Save failed (${res.status})`);
     }
-    const data = (await res.json()) as { body_md: string; title: string };
-    ctx.onPreview(data.body_md, data.title);
+    const data = (await res.json()) as { contract_id: string };
+    ctx.onSaved(data.contract_id);
   } catch (err) {
     ctx.setError(err instanceof Error ? err.message : String(err));
-  } finally {
     ctx.setSubmitting(false);
   }
 }
@@ -828,7 +854,6 @@ async function submitTemplate(
 function firePostClient(answers: Record<string, unknown>): void {
   const name = answers.client as NameValue | undefined;
   const addr = answers.client_address as AddressValue | undefined;
-  // NDA fallback — only one of these will be present per industry.
   const ndaName =
     (answers.disclosing_party as NameValue | undefined) ??
     (answers.receiving_party as NameValue | undefined);
@@ -853,9 +878,7 @@ function firePostClient(answers: Record<string, unknown>): void {
     body: JSON.stringify(payload),
   })
     .then((r) =>
-      r.ok
-        ? toast.success("Client saved")
-        : toast.error("Couldn't save client"),
+      r.ok ? toast.success("Client saved") : toast.error("Couldn't save client"),
     )
     .catch(() => toast.error("Couldn't save client"));
 }
@@ -879,9 +902,7 @@ function firePostBusinessProfile(answers: Record<string, unknown>): void {
     body: JSON.stringify(payload),
   })
     .then((r) =>
-      r.ok
-        ? toast.success("Profile saved")
-        : toast.error("Couldn't save profile"),
+      r.ok ? toast.success("Profile saved") : toast.error("Couldn't save profile"),
     )
     .catch(() => toast.error("Couldn't save profile"));
 }
@@ -958,7 +979,9 @@ function StreamingPanel({
                 throw new Error(parsed.message);
               }
             } catch (parseErr) {
-              throw parseErr instanceof Error ? parseErr : new Error(String(parseErr));
+              throw parseErr instanceof Error
+                ? parseErr
+                : new Error(String(parseErr));
             }
           }
         }
@@ -982,9 +1005,12 @@ function StreamingPanel({
   return (
     <section className="section" style={{ paddingTop: 64 }}>
       <div className="app-shell">
-        <div className="content--reading" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <header style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
+            <span
+              className="gf-label"
+              style={{ color: "var(--accent-strong)" }}
+            >
               // AI DRAFT
             </span>
             <h1 className="gf-h2" style={{ marginTop: 0 }}>
@@ -992,7 +1018,7 @@ function StreamingPanel({
             </h1>
             <p className="gf-body-sm" style={{ color: "var(--fg-3)" }}>
               {done
-                ? "Review below, then save to keep this contract."
+                ? "Saving and opening the editor…"
                 : "Streaming from the model. This usually takes 20–40 seconds."}
             </p>
           </header>
@@ -1002,7 +1028,11 @@ function StreamingPanel({
               <p className="gf-body" style={{ color: "var(--sev-red)" }}>
                 {errorMsg}
               </p>
-              <button type="button" className="gf-btn-ghost" onClick={onAbort}>
+              <button
+                type="button"
+                className="gf-btn-ghost"
+                onClick={onAbort}
+              >
                 ← Try again
               </button>
             </div>
@@ -1019,10 +1049,14 @@ function StreamingPanel({
           )}
 
           {!done && !errorMsg ? (
-            <button type="button" className="gf-btn-ghost" onClick={() => {
-              abortRef.current?.abort();
-              onAbort();
-            }}>
+            <button
+              type="button"
+              className="gf-btn-ghost"
+              onClick={() => {
+                abortRef.current?.abort();
+                onAbort();
+              }}
+            >
               Cancel
             </button>
           ) : null}

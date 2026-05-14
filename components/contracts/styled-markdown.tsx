@@ -10,6 +10,7 @@ type Props = {
   style: ContractStyle;
   logoSrc?: string | null;
   businessName?: string | null;
+  businessAddress?: string | null;
 };
 
 const FONT_STACKS: Record<ContractStyle["typography"], { heading: string; body: string }> = {
@@ -33,6 +34,7 @@ export function StyledMarkdown({
   style,
   logoSrc,
   businessName,
+  businessAddress,
 }: Props) {
   const resolved = resolveStyle(style);
   const fonts = FONT_STACKS[style.typography];
@@ -49,43 +51,53 @@ export function StyledMarkdown({
   ].join(" ");
 
   const showLogo = style.logo_placement !== "none" && Boolean(logoSrc);
-  const logoNode = showLogo ? (
+  const logoImg = logoSrc ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={logoSrc ?? undefined} alt={businessName ?? "Logo"} className="doc-logo" />
+    <img src={logoSrc} alt={businessName ?? "Logo"} className="doc-logo" />
   ) : null;
+
+  // Header_with_info renders both logo (left) and company info (right).
+  const headerWithInfo =
+    style.logo_placement === "header_with_info" ? (
+      <div className="doc-preview__head">
+        <div className="doc-preview__head-logo">{logoImg}</div>
+        <div className="doc-preview__head-info">
+          {businessName ? <strong>{businessName}</strong> : null}
+          {businessAddress ? <span>{businessAddress}</span> : null}
+        </div>
+      </div>
+    ) : null;
+
+  const plainHeaderLogo =
+    style.logo_placement === "header" && showLogo ? logoImg : null;
 
   if (style.layout === "cover") {
     return (
       <div className={classNames} style={cssVars}>
         <div className="doc-preview__cover">
-          {style.logo_placement === "cover" && logoNode}
+          {style.logo_placement === "cover" && logoImg}
           <h1 className="doc-preview__cover-title">{title}</h1>
           {businessName ? (
             <p className="doc-preview__cover-sub">{businessName}</p>
           ) : null}
         </div>
         <hr />
-        {style.logo_placement === "header" && logoNode}
+        {plainHeaderLogo}
+        {headerWithInfo}
         <div className="doc-preview__body">
           <ReactMarkdown>{body_md}</ReactMarkdown>
         </div>
-        {style.logo_placement === "footer" && (
-          <div className="doc-preview__footer">{logoNode}</div>
-        )}
       </div>
     );
   }
 
   return (
     <div className={classNames} style={cssVars}>
-      {style.logo_placement === "header" && logoNode}
-      {style.logo_placement === "cover" && logoNode}
+      {plainHeaderLogo}
+      {headerWithInfo}
       <div className="doc-preview__body">
         <ReactMarkdown>{body_md}</ReactMarkdown>
       </div>
-      {style.logo_placement === "footer" && (
-        <div className="doc-preview__footer">{logoNode}</div>
-      )}
     </div>
   );
 }

@@ -5,9 +5,18 @@ export type SelectOption = { value: string; label: string };
 type QuestionBase = {
   id: string;
   label: string;
+  /** Plain helper text shown under the input. Always visible. */
   help?: string;
+  /** Legacy click-to-reveal tooltip (kept for optional fields). */
   tooltip?: string;
   required?: boolean;
+  /**
+   * Optional helper that depends on other answers (e.g. rate_amount help that
+   * reads rate_type). Returning undefined falls back to `help`.
+   */
+  dynamicHelp?: (
+    allAnswers: Record<string, unknown>,
+  ) => string | null | undefined;
 };
 
 export type Question =
@@ -19,6 +28,9 @@ export type Question =
   | (QuestionBase & {
       kind: "select";
       options: SelectOption[];
+      /** Optional inline explanation shown under the dropdown for the
+       *  currently-selected option. */
+      optionDescriptions?: Record<string, string>;
     })
   | (QuestionBase & {
       kind: "number";
@@ -30,6 +42,11 @@ export type Question =
     })
   | (QuestionBase & {
       kind: "date";
+      /** Adds a checkbox under the date input that, when ticked, marks the
+       *  date as open-ended. The companion boolean field is stored at
+       *  `${id}_open` in the answers Record. */
+      allowOpenEnded?: boolean;
+      openLabel?: string;
     })
   | (QuestionBase & {
       kind: "toggle";
@@ -61,6 +78,13 @@ export type AddressValue = {
   city?: string;
   street?: string;
   postal?: string;
+};
+
+export type IpSharedParty = { name: string; pct: number };
+export type IpSharedValue = {
+  provider_pct: number;
+  client_pct: number;
+  additional: IpSharedParty[];
 };
 
 export type IndustryId = "freelance" | "software" | "design" | "nda";

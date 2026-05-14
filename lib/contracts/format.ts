@@ -46,7 +46,7 @@ export function clauses(title: string, items: string[]): string {
 }
 
 export function FOOTER(): string {
-  return "---\n\n*This contract was drafted with AI assistance. Have a lawyer review for high-value engagements.*";
+  return "---\n\n*This document is a template, not legal advice. Have a qualified lawyer review country-specific requirements before signing. Drafted with AI assistance.*";
 }
 
 export function formatParty(name: unknown): string {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { reviewContract, type Redline } from "@/lib/ai/review";
-import { truncate } from "@/lib/parse";
+import { extractContractText, truncate } from "@/lib/parse";
 import { getSupabaseServiceRole } from "@/lib/supabase/server";
 import type { VerdictSeverity } from "@/lib/supabase/types";
 
@@ -11,7 +11,12 @@ export const maxDuration = 60;
 // strict per-IP soft rate-limit. Returns a teaser verdict; the full report
 // is gated behind sign-up.
 
+// Free preview always runs on a cheap, available model. The full /scan route
+// lets authed users pick a model from MODEL_CATALOG.
+const PREVIEW_MODEL_ID = "gpt-4o";
+
 const MAX_PREVIEW_CHARS = 30_000;
+const MAX_PREVIEW_FILE_BYTES = 5 * 1024 * 1024; // 5MB for free preview uploads
 const MAX_PER_IP_PER_DAY = 3;
 
 type PreviewResponse = {
@@ -62,37 +67,93 @@ function firstSerious(redlines: Redline[]): Redline | null {
   );
 }
 
-export async function POST(req: Request) {
+type ReadResult =
+  | { ok: true; text: string }
+  | { ok: false; status: number; error: string; code?: string };
+
+async function readPreviewPayload(req: Request): Promise<ReadResult> {
   const contentType = req.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) {
-    return NextResponse.json(
-      { error: "Send application/json with { text }" },
-      { status: 415 },
-    );
+
+  if (contentType.includes("multipart/form-data")) {
+    let form: FormData;
+    try {
+      form = await req.formData();
+    } catch {
+      return { ok: false, status: 400, error: "Invalid form data" };
+    }
+    const file = form.get("file");
+    if (!(file instanceof File)) {
+      const raw = typeof form.get("text") === "string" ? (form.get("text") as string).trim() : "";
+      if (!raw) {
+        return { ok: false, status: 400, error: "Attach a file or paste text" };
+      }
+      return validateText(raw);
+    }
+    if (file.size === 0) {
+      return { ok: false, status: 400, error: "Uploaded file is empty" };
+    }
+    if (file.size > MAX_PREVIEW_FILE_BYTES) {
+      return {
+        ok: false,
+        status: 413,
+        error: "Free preview accepts files up to 5MB. Sign up free for the full 10MB limit.",
+        code: "preview_file_too_large",
+      };
+    }
+    try {
+      const extracted = await extractContractText(file);
+      return validateText(extracted.text);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to parse file";
+      return { ok: false, status: 415, error: message };
+    }
   }
 
-  let body: { text?: unknown };
-  try {
-    body = (await req.json()) as { text?: unknown };
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  if (contentType.includes("application/json")) {
+    let body: { text?: unknown };
+    try {
+      body = (await req.json()) as { text?: unknown };
+    } catch {
+      return { ok: false, status: 400, error: "Invalid JSON body" };
+    }
+    const raw = typeof body.text === "string" ? body.text.trim() : "";
+    return validateText(raw);
   }
 
-  const raw = typeof body.text === "string" ? body.text.trim() : "";
+  return {
+    ok: false,
+    status: 415,
+    error: "Send application/json with { text } or multipart/form-data with file",
+  };
+}
+
+function validateText(raw: string): ReadResult {
   if (raw.length < 200) {
-    return NextResponse.json(
-      { error: "Paste at least a paragraph of your contract (200+ characters)." },
-      { status: 400 },
-    );
+    return {
+      ok: false,
+      status: 400,
+      error: "Paste at least a paragraph of your contract (200+ characters).",
+    };
   }
   if (raw.length > MAX_PREVIEW_CHARS) {
+    return {
+      ok: false,
+      status: 413,
+      error:
+        "Preview is capped at 30,000 characters. Sign up free to scan longer contracts.",
+      code: "preview_too_long",
+    };
+  }
+  return { ok: true, text: raw };
+}
+
+export async function POST(req: Request) {
+  const payload = await readPreviewPayload(req);
+  if (!payload.ok) {
     return NextResponse.json(
-      {
-        error:
-          "Preview is capped at 30,000 characters. Sign up free to scan longer contracts.",
-        code: "preview_too_long",
-      },
-      { status: 413 },
+      payload.code ? { error: payload.error, code: payload.code } : { error: payload.error },
+      { status: payload.status },
     );
   }
 
@@ -122,11 +183,11 @@ export async function POST(req: Request) {
     );
   }
 
-  const extracted = truncate(raw);
+  const extracted = truncate(payload.text);
 
   let result;
   try {
-    result = await reviewContract(extracted.text);
+    result = await reviewContract(extracted.text, PREVIEW_MODEL_ID);
   } catch (err) {
     const message = err instanceof Error ? err.message : "AI review failed";
     return NextResponse.json(

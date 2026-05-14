@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { SectionHeading } from "@/components/marketing/section-heading";
+import { Reveal } from "@/components/marketing/reveal";
 
 type Tier = {
   id: string;
@@ -109,10 +110,15 @@ export function Pricing({ signedIn = false }: Props = {}) {
           </button>
         </div>
         <div className="pricing__grid">
-          {TIERS.map((t) => {
+          {TIERS.map((t, i) => {
             const b = yearly ? t.y : t.m;
             return (
-              <div key={t.id} className={"pricing__card " + (t.hot ? "is-hot" : "")}>
+              <Reveal
+                key={t.id}
+                as="div"
+                className={"pricing__card " + (t.hot ? "is-hot" : "")}
+                delayMs={i * 80}
+              >
                 {t.hot ? <span className="pricing__hot">MOST POPULAR</span> : null}
                 <span className="gf-label">// {t.id.toUpperCase()}</span>
                 <h3 className="gf-h3" style={{ margin: "8px 0 6px" }}>
@@ -143,7 +149,7 @@ export function Pricing({ signedIn = false }: Props = {}) {
                 >
                   {t.cta} <span className="arrow">→</span>
                 </Link>
-              </div>
+              </Reveal>
             );
           })}
         </div>

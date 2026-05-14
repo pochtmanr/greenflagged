@@ -1,4 +1,5 @@
 import { SectionHeading } from "@/components/marketing/section-heading";
+import { Reveal } from "@/components/marketing/reveal";
 
 const STEPS = [
   {
@@ -30,14 +31,19 @@ export function ThreeStep() {
           lead="Three steps. No legalese."
         />
         <div className="three-step">
-          {STEPS.map((s) => (
-            <div key={s.n} className="gf-frame three-step__card">
+          {STEPS.map((s, i) => (
+            <Reveal
+              key={s.n}
+              as="div"
+              className="gf-frame three-step__card"
+              delayMs={i * 80}
+            >
               <span className="gf-frame-bl" />
               <span className="gf-frame-br" />
               <span className="gf-label">{s.n} / STEP</span>
               <h3 className="gf-h3 three-step__title">{s.title}</h3>
               <p className="gf-body-sm">{s.body}</p>
-            </div>
+            </Reveal>
           ))}
         </div>
       </div>

@@ -204,7 +204,7 @@ function coverParagraphs(
 ): Paragraph[] {
   const accent = stripHash(resolved.colors.accent);
   const out: Paragraph[] = [];
-  if (args.logo_buffer && resolved.logo_placement !== "footer") {
+  if (args.logo_buffer && resolved.logo_placement !== "none") {
     const para = logoParagraph(args.logo_buffer, 64, AlignmentType.CENTER);
     if (para) out.push(para);
   }
@@ -330,16 +330,14 @@ export async function renderContractDocx(args: ThemedDocxArgs): Promise<Buffer> 
   }
 
   const headerPara =
-    resolved.logo_placement === "header" && args.logo_buffer
+    (resolved.logo_placement === "header" ||
+      resolved.logo_placement === "header_with_info") &&
+    args.logo_buffer
       ? logoParagraph(args.logo_buffer, 32, AlignmentType.RIGHT)
-      : null;
-  const footerPara =
-    resolved.logo_placement === "footer" && args.logo_buffer
-      ? logoParagraph(args.logo_buffer, 24, AlignmentType.CENTER)
       : null;
 
   const headerLogo = headerPara ? new Header({ children: [headerPara] }) : undefined;
-  const footerLogo = footerPara ? new Footer({ children: [footerPara] }) : undefined;
+  const footerLogo: Footer | undefined = undefined;
 
   const doc = new Document({
     styles: {

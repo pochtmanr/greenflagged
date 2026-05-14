@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Dropdown } from "@/components/ui/dropdown";
 import type { AddressValue, NameValue } from "@/lib/contracts/types";
 
 export type SavedClient = {
@@ -17,6 +18,9 @@ export type SavedClient = {
 type Props = {
   clients: SavedClient[];
   onPick: (name: NameValue, addr: AddressValue) => void;
+  /** Controlled selected id. If omitted, the picker manages its own state. */
+  selectedId?: string | null;
+  onSelectedIdChange?: (id: string | null) => void;
 };
 
 function clientLabel(c: SavedClient): string {
@@ -25,8 +29,37 @@ function clientLabel(c: SavedClient): string {
   return c.business_name || personal || "Unnamed";
 }
 
-export function ClientPicker({ clients, onPick }: Props) {
+export function ClientPicker({
+  clients,
+  onPick,
+  selectedId,
+  onSelectedIdChange,
+}: Props) {
+  const [internalId, setInternalId] = React.useState<string | null>(null);
+  const id = selectedId !== undefined ? selectedId : internalId;
+
   if (clients.length === 0) return null;
+
+  const handleChange = (nextId: string) => {
+    const c = clients.find((x) => x.id === nextId);
+    if (!c) return;
+    if (onSelectedIdChange) onSelectedIdChange(nextId);
+    else setInternalId(nextId);
+    onPick(
+      {
+        first: c.first_name ?? "",
+        family: c.family_name ?? "",
+        business: c.business_name ?? "",
+      },
+      {
+        country: c.country_code ?? "",
+        city: c.city ?? "",
+        street: c.street ?? "",
+        postal: c.postal_code ?? "",
+      },
+    );
+  };
+
   return (
     <div
       style={{
@@ -46,36 +79,13 @@ export function ClientPicker({ clients, onPick }: Props) {
       >
         {"// Saved clients"}
       </span>
-      <select
-        className="gf-input"
-        defaultValue=""
-        style={{ appearance: "auto" }}
-        onChange={(e) => {
-          const c = clients.find((x) => x.id === e.target.value);
-          if (!c) return;
-          onPick(
-            {
-              first: c.first_name ?? "",
-              family: c.family_name ?? "",
-              business: c.business_name ?? "",
-            },
-            {
-              country: c.country_code ?? "",
-              city: c.city ?? "",
-              street: c.street ?? "",
-              postal: c.postal_code ?? "",
-            },
-          );
-          e.currentTarget.value = "";
-        }}
-      >
-        <option value="">Select an existing client…</option>
-        {clients.map((c) => (
-          <option key={c.id} value={c.id}>
-            {clientLabel(c)}
-          </option>
-        ))}
-      </select>
+      <Dropdown
+        value={id}
+        onChange={handleChange}
+        options={clients.map((c) => ({ value: c.id, label: clientLabel(c) }))}
+        placeholder="Select an existing client…"
+        aria-label="Saved clients"
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { Dropdown } from "@/components/ui/dropdown";
 import type {
   Accent,
   ContractStyle,
@@ -32,6 +33,15 @@ export function StyleSidebar({
   selectedProfileId,
   onProfileChange,
 }: Props) {
+  const profileOptions = [
+    { value: "", label: "— None —" },
+    ...profiles.map((p) => ({
+      value: p.id,
+      label: p.label + (p.is_default ? "  · default" : ""),
+      hint: p.has_logo ? "Logo" : undefined,
+    })),
+  ];
+
   return (
     <>
       <div
@@ -55,7 +65,6 @@ export function StyleSidebar({
           label="Color accent"
           value={value.accent}
           options={[
-            { value: "sage", label: "Sage" },
             { value: "ink", label: "Ink" },
             { value: "brand", label: "Brand" },
           ]}
@@ -68,7 +77,7 @@ export function StyleSidebar({
             </span>
             <input
               type="color"
-              value={value.brand_color ?? "#4A7A5C"}
+              value={value.brand_color ?? "#0E110F"}
               onChange={(e) =>
                 onChange({ ...value, brand_color: e.target.value })
               }
@@ -91,7 +100,7 @@ export function StyleSidebar({
           value={value.logo_placement}
           options={[
             { value: "header", label: "Header" },
-            { value: "footer", label: "Footer" },
+            { value: "header_with_info", label: "Header + info" },
             { value: "cover", label: "Cover" },
             { value: "none", label: "None" },
           ]}
@@ -99,6 +108,15 @@ export function StyleSidebar({
             onChange({ ...value, logo_placement: v as LogoPlacement })
           }
         />
+        {value.logo_placement === "header_with_info" ? (
+          <p
+            className="gf-body-sm"
+            style={{ color: "var(--fg-3)", margin: 0 }}
+          >
+            Pulls company name and address from the selected business profile
+            below.
+          </p>
+        ) : null}
       </div>
 
       <div
@@ -106,21 +124,13 @@ export function StyleSidebar({
         style={{ display: "flex", flexDirection: "column", gap: 12 }}
       >
         <span className="gf-label">// BUSINESS PROFILE</span>
-        <select
-          className="gf-input"
+        <Dropdown
           value={selectedProfileId ?? ""}
-          onChange={(e) => onProfileChange(e.target.value || null)}
-          style={{ appearance: "auto" }}
-        >
-          <option value="">— None —</option>
-          {profiles.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label}
-              {p.is_default ? " · default" : ""}
-              {p.has_logo ? " · logo" : ""}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => onProfileChange(v === "" ? null : v)}
+          options={profileOptions}
+          placeholder="— None —"
+          aria-label="Business profile"
+        />
         <Link href="/settings/business" className="gf-btn-link">
           Manage profiles →
         </Link>

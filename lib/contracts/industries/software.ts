@@ -1,21 +1,27 @@
 import { z } from "zod";
-import { COUNTRIES, COUNTRY_CODES } from "@/lib/countries";
+import { COUNTRY_CODES } from "@/lib/countries";
 import type { IndustrySchema, Question } from "../types";
 import {
   FOOTER,
   clauses,
   fallback,
   formatAddress,
-  formatCountry,
   formatCurrency,
   formatDate,
   formatParty,
 } from "../format";
+import { JURISDICTION_OPTIONS, getJurisdiction } from "../jurisdictions";
 
 const RATE_TYPE_LABEL: Record<string, string> = {
   hourly: "an hourly rate",
   fixed: "a fixed project fee",
   retainer: "a monthly retainer",
+};
+
+const RATE_TYPE_UNIT: Record<string, string> = {
+  hourly: "per hour",
+  fixed: "for the full project",
+  retainer: "per month",
 };
 
 const PAYMENT_SCHEDULE_LABEL: Record<string, string> = {
@@ -31,18 +37,38 @@ const INDEMNITY_LABEL: Record<string, string> = {
   uncapped: "uncapped (each Party retains full liability under applicable law)",
 };
 
-const TOOLTIP_IP_ASSIGNMENT =
-  "When ON: copyright + patent rights transfer to the client on payment. When OFF: client gets a license to use, you keep ownership. Choose based on whether you'll reuse the code in other projects.";
-const TOOLTIP_GOVERNING_LAW =
-  "The country (and by extension, court system) whose laws interpret this contract if you end up in dispute. Pick where the provider is based — easier to enforce locally. Cross-border disputes are expensive.";
-const TOOLTIP_INDEMNITY =
-  "The maximum amount you'd pay if you indemnify the client for a third-party claim (e.g. they get sued because your code infringed a patent). '1× fees' is the safest cap for freelancers. 'Unlimited' is dangerous — never accept without a lawyer.";
-const TOOLTIP_WARRANTY =
-  "Number of days after delivery during which you fix bugs at no charge. Standard: 30. Beyond that the client pays hourly.";
-const TOOLTIP_TERMINATION_NOTICE =
-  "How many days' written notice either party must give to end the contract. 14–30 days is typical. Shorter favors the client; longer favors the provider.";
-const TOOLTIP_PAYMENT_SCHEDULE =
-  "When the provider gets paid. 'Net 30' means within 30 days of invoice. 'Milestones' splits payment across deliverables. 'On completion' is risky for the provider — lots of money tied up.";
+const RATE_TYPE_OPT_DESC: Record<string, string> = {
+  hourly: "You bill for hours worked. Best for ongoing maintenance or unscoped work.",
+  fixed: "One total price for a defined deliverable. Best when scope is clear.",
+  retainer: "A recurring monthly amount. Best for long engagements.",
+};
+
+const PAYMENT_SCHEDULE_OPT_DESC: Record<string, string> = {
+  on_completion: "Invoice is due when the work is delivered.",
+  milestones: "Invoices follow named milestones in the scope.",
+  net_15: "Invoices are due 15 days after issue.",
+  net_30: "Invoices are due 30 days after issue.",
+};
+
+const INDEMNITY_OPT_DESC: Record<string, string> = {
+  "1x": "Recommended freelancer-friendly cap. Limits exposure to 1× the fees the Client paid you in the last 12 months.",
+  "2x": "Middle ground. Higher exposure but a more comfortable position for the Client.",
+  uncapped: "Uncapped exposure. Never accept without a lawyer review — a single claim can exceed everything you've earned.",
+};
+
+const HELP_GOVERNING_LAW =
+  "The legal system that interprets this contract. Pick where you (the Provider) are based — easier and cheaper to enforce locally.";
+
+function clientNameFor(answers: Record<string, unknown>): string {
+  const client = answers.client as
+    | { first?: string; family?: string; business?: string }
+    | undefined;
+  if (!client) return "The Client";
+  const business = client.business?.trim();
+  if (business) return business;
+  const personal = [client.first, client.family].filter(Boolean).join(" ").trim();
+  return personal || "The Client";
+}
 
 export const softwareQuestions: Question[] = [
   {
@@ -95,11 +121,13 @@ export const softwareQuestions: Question[] = [
     kind: "select",
     label: "Rate type",
     required: true,
+    help: "How you charge for this engagement. Pick one — the contract phrasing follows.",
     options: [
       { value: "hourly", label: "Hourly" },
       { value: "fixed", label: "Fixed project fee" },
       { value: "retainer", label: "Monthly retainer" },
     ],
+    optionDescriptions: RATE_TYPE_OPT_DESC,
   },
   {
     id: "rate_amount",
@@ -108,22 +136,36 @@ export const softwareQuestions: Question[] = [
     suffix: "€",
     min: 0,
     required: true,
+    dynamicHelp: (a) => {
+      const amt = typeof a.rate_amount === "number" ? a.rate_amount : null;
+      const rt = typeof a.rate_type === "string" ? a.rate_type : null;
+      if (!amt || !rt) return null;
+      const unit = RATE_TYPE_UNIT[rt] ?? "";
+      return `${clientNameFor(a)} will pay you €${amt.toLocaleString("en-US")} ${unit}.`.trim();
+    },
   },
   {
     id: "payment_schedule",
     kind: "select",
     label: "Payment schedule",
     required: true,
-    tooltip: TOOLTIP_PAYMENT_SCHEDULE,
+    help: "When invoices are due. Shorter schedules favor you.",
     options: [
       { value: "on_completion", label: "On completion" },
       { value: "milestones", label: "Milestones" },
       { value: "net_15", label: "Net 15" },
       { value: "net_30", label: "Net 30" },
     ],
+    optionDescriptions: PAYMENT_SCHEDULE_OPT_DESC,
   },
   { id: "start_date", kind: "date", label: "Start date" },
-  { id: "end_date", kind: "date", label: "Estimated end date" },
+  {
+    id: "end_date",
+    kind: "date",
+    label: "Estimated end date",
+    allowOpenEnded: true,
+    openLabel: "No estimated end date",
+  },
   {
     id: "warranty_days",
     kind: "number",
@@ -131,14 +173,14 @@ export const softwareQuestions: Question[] = [
     suffix: "days",
     defaultValue: 30,
     min: 0,
-    tooltip: TOOLTIP_WARRANTY,
+    help: "Days after delivery during which you fix bugs at no charge. Standard: 30.",
   },
   {
     id: "ip_assignment",
     kind: "toggle",
     label: "Full IP assignment on payment? (off = perpetual licence)",
     defaultValue: true,
-    tooltip: TOOLTIP_IP_ASSIGNMENT,
+    help: "On: rights transfer to the Client on payment. Off: you keep ownership and the Client gets a perpetual licence.",
   },
   {
     id: "oss_ack",
@@ -151,12 +193,13 @@ export const softwareQuestions: Question[] = [
     kind: "select",
     label: "Indemnity cap",
     required: true,
-    tooltip: TOOLTIP_INDEMNITY,
+    help: "Maximum amount you'd pay if a third party sues over your code. 1× fees is the safest cap.",
     options: [
       { value: "1x", label: "1× fees paid" },
       { value: "2x", label: "2× fees paid" },
       { value: "uncapped", label: "Uncapped" },
     ],
+    optionDescriptions: INDEMNITY_OPT_DESC,
   },
   {
     id: "termination_notice",
@@ -165,15 +208,15 @@ export const softwareQuestions: Question[] = [
     suffix: "days",
     defaultValue: 14,
     min: 0,
-    tooltip: TOOLTIP_TERMINATION_NOTICE,
+    help: "Days of written notice either party must give to end the contract. 14–30 is typical.",
   },
   {
     id: "governing_law",
     kind: "select",
     label: "Governing law (country)",
     required: true,
-    tooltip: TOOLTIP_GOVERNING_LAW,
-    options: COUNTRIES.map((c) => ({ value: c.code, label: c.name })),
+    help: HELP_GOVERNING_LAW,
+    options: JURISDICTION_OPTIONS,
   },
 ];
 
@@ -205,12 +248,14 @@ const validator = z.object({
   payment_schedule: z.enum(["on_completion", "milestones", "net_15", "net_30"]),
   start_date: z.string().optional().default(""),
   end_date: z.string().optional().default(""),
+  end_date_open: z.boolean().optional().default(false),
   warranty_days: z.coerce.number().int().min(0).default(30),
   ip_assignment: z.coerce.boolean().default(true),
   oss_ack: z.coerce.boolean().default(true),
   indemnity_cap: z.enum(["1x", "2x", "uncapped"]),
   termination_notice: z.coerce.number().int().min(0).default(14),
   governing_law: z.string().min(2),
+  country_rider_on: z.boolean().optional().default(false),
 });
 
 type SoftwareAnswers = z.infer<typeof validator>;
@@ -221,6 +266,7 @@ function render(raw: Record<string, unknown>): string {
   const clientAddr = formatAddress(a.client_address);
   const providerParty = formatParty(a.provider);
   const providerAddr = formatAddress(a.provider_address);
+  const juris = getJurisdiction(a.governing_law);
 
   const parties = clauses("Parties", [
     `This Software Services Agreement is entered into between ${clientParty} ("Client"), at ${clientAddr}, and ${providerParty} ("Provider"), at ${providerAddr}.`,
@@ -243,22 +289,26 @@ function render(raw: Record<string, unknown>): string {
     "Deliverables are considered accepted unless the Client provides written notice of specific defects within fourteen (14) days of delivery.",
   ]);
 
-  const payment = clauses("Payment", [
-    `The Client will pay the Provider ${formatCurrency(a.rate_amount)} as ${
-      RATE_TYPE_LABEL[a.rate_type] ?? "the agreed fee"
-    }.`,
+  const paymentLines: string[] = [
+    `The Client will pay the Provider ${formatCurrency(a.rate_amount)} as ${RATE_TYPE_LABEL[a.rate_type] ?? "the agreed fee"}.`,
     `Payment is due ${PAYMENT_SCHEDULE_LABEL[a.payment_schedule] ?? "as agreed"}.`,
     "Late payments accrue interest at the statutory rate or 1.5% per month, whichever is lower.",
     "Fees are exclusive of applicable taxes, which the Client is responsible for.",
-  ]);
+  ];
+  if (a.country_rider_on && juris?.rider?.id === "vat_reverse_charge") {
+    paymentLines.push(juris.rider.body);
+  }
+  const payment = clauses("Payment", paymentLines);
 
   const timeline = clauses("Timeline", [
     a.start_date
       ? `Work begins on ${formatDate(a.start_date)}.`
       : "Work begins on signature of this Agreement by both Parties.",
-    a.end_date
-      ? `Estimated completion: ${formatDate(a.end_date)}, subject to Client cooperation and timely feedback.`
-      : "The completion date will be agreed in writing after scope is finalised.",
+    a.end_date_open
+      ? "The engagement continues on a rolling basis until terminated by either Party in accordance with the Termination clause."
+      : a.end_date
+        ? `Estimated completion: ${formatDate(a.end_date)}, subject to Client cooperation and timely feedback.`
+        : "The completion date will be agreed in writing after scope is finalised.",
   ]);
 
   const ipText = a.ip_assignment
@@ -292,20 +342,27 @@ function render(raw: Record<string, unknown>): string {
   ]);
 
   const termination = clauses("Termination", [
-    `Either Party may terminate this Agreement on ${fallback(
-      a.termination_notice,
-      "the agreed number of",
-    )} days' written notice for any reason.`,
+    `Either Party may terminate this Agreement on ${fallback(a.termination_notice, "the agreed number of")} days' written notice for any reason.`,
     "Either Party may terminate immediately for material breach not cured within fourteen (14) days of written notice.",
     "On termination, the Client will pay for all work performed up to the termination date and the Provider will deliver work-in-progress in its current state.",
   ]);
 
-  const general = clauses("General", [
-    `This Agreement is governed by the laws of ${formatCountry(a.governing_law)} without reference to its conflict-of-laws rules. The Parties submit to the exclusive jurisdiction of the courts of that country.`,
+  const generalLines: string[] = [
+    juris
+      ? juris.governing_law_sentence
+      : `This Agreement is governed by the laws of ${a.governing_law} without reference to its conflict-of-laws rules. The Parties submit to the exclusive jurisdiction of the courts of that country.`,
     "If any provision is held unenforceable, the remaining provisions remain in full force.",
     "This Agreement is the entire agreement on its subject matter and supersedes prior discussions.",
     "Amendments require a writing signed (or electronically acknowledged) by both Parties.",
-  ]);
+  ];
+  if (
+    a.country_rider_on &&
+    juris?.rider &&
+    juris.rider.id !== "vat_reverse_charge"
+  ) {
+    generalLines.push(juris.rider.body);
+  }
+  const general = clauses("General", generalLines);
 
   const signatures = clauses("Signatures", [
     "**Client:** ____________________________   Date: ____________",

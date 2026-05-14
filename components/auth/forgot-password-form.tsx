@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { siteUrl } from "@/lib/site-url";
 
 type Phase = "idle" | "submitting" | "sent";
 
@@ -18,7 +19,7 @@ export function ForgotPasswordForm() {
     setPhase("submitting");
     setError(null);
     const supabase = getSupabaseBrowser();
-    const redirectTo = `${window.location.origin}/reset-password`;
+    const redirectTo = `${siteUrl()}/reset-password`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
     });

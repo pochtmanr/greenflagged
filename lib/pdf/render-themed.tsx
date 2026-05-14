@@ -231,19 +231,63 @@ function HeaderLogo({ url }: { url: string }) {
   );
 }
 
-function FooterLogo({ url }: { url: string }) {
+function HeaderLogoWithInfo({
+  url,
+  business,
+  resolved,
+}: {
+  url?: string;
+  business?: BusinessFields;
+  resolved: ResolvedStyle;
+}) {
+  const partyName =
+    business?.business_name ||
+    [business?.first_name, business?.family_name].filter(Boolean).join(" ") ||
+    "";
   return (
     <View
-      fixed
       style={{
-        position: "absolute",
-        bottom: 24,
-        left: 0,
-        right: 0,
-        alignItems: "center",
+        flexDirection: "row",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        marginBottom: 18,
+        paddingBottom: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: resolved.colors.rule,
+        borderBottomStyle: "dashed",
       }}
     >
-      <Image src={url} style={{ height: 20, maxWidth: 100, objectFit: "contain" }} />
+      {url ? (
+        <Image src={url} style={{ height: 40, maxWidth: 160, objectFit: "contain" }} />
+      ) : (
+        <View />
+      )}
+      <View style={{ alignItems: "flex-end", maxWidth: 240 }}>
+        {partyName ? (
+          <Text
+            style={{
+              fontFamily: resolved.fonts.bodyBold,
+              fontSize: 11,
+              color: resolved.colors.ink,
+              marginBottom: 2,
+            }}
+          >
+            {partyName}
+          </Text>
+        ) : null}
+        {business?.address_line ? (
+          <Text
+            style={{
+              fontFamily: resolved.fonts.body,
+              fontSize: 9.5,
+              color: resolved.colors.muted,
+              textAlign: "right",
+            }}
+          >
+            {business.address_line}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -357,12 +401,9 @@ export async function renderContractPdf(args: ThemedPdfArgs): Promise<Buffer> {
     resolved.logo_placement === "header" && args.logo_data_url
       ? args.logo_data_url
       : undefined;
-  const footerLogo =
-    resolved.logo_placement === "footer" && args.logo_data_url
-      ? args.logo_data_url
-      : undefined;
+  const showHeaderInfo = resolved.logo_placement === "header_with_info";
   const coverLogo =
-    showCover && resolved.logo_placement !== "footer" && resolved.logo_placement !== "none"
+    showCover && resolved.logo_placement !== "none"
       ? args.logo_data_url
       : undefined;
 
@@ -383,6 +424,13 @@ export async function renderContractPdf(args: ThemedPdfArgs): Promise<Buffer> {
       ) : null}
       <Page size="A4" style={pageStyle(resolved)}>
         {headerLogo ? <HeaderLogo url={headerLogo} /> : null}
+        {showHeaderInfo ? (
+          <HeaderLogoWithInfo
+            url={args.logo_data_url}
+            business={args.business}
+            resolved={resolved}
+          />
+        ) : null}
         {!showCover ? (
           <Text style={styles.h1}>{args.title}</Text>
         ) : null}
@@ -401,8 +449,6 @@ export async function renderContractPdf(args: ThemedPdfArgs): Promise<Buffer> {
             {bodyBlocks.map((b, i) => renderBlock(b, i, resolved, styles, bodyBlocks))}
           </View>
         )}
-
-        {footerLogo ? <FooterLogo url={footerLogo} /> : null}
       </Page>
     </Document>
   );

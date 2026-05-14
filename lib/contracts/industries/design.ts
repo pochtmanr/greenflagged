@@ -1,21 +1,27 @@
 import { z } from "zod";
-import { COUNTRIES, COUNTRY_CODES } from "@/lib/countries";
+import { COUNTRY_CODES } from "@/lib/countries";
 import type { IndustrySchema, Question } from "../types";
 import {
   FOOTER,
   clauses,
   fallback,
   formatAddress,
-  formatCountry,
   formatCurrency,
   formatDate,
   formatParty,
 } from "../format";
+import { JURISDICTION_OPTIONS, getJurisdiction } from "../jurisdictions";
 
 const RATE_TYPE_LABEL: Record<string, string> = {
   hourly: "an hourly rate",
   fixed: "a fixed project fee",
   retainer: "a monthly retainer",
+};
+
+const RATE_TYPE_UNIT: Record<string, string> = {
+  hourly: "per hour",
+  fixed: "for the full project",
+  retainer: "per month",
 };
 
 const PAYMENT_SCHEDULE_LABEL: Record<string, string> = {
@@ -34,16 +40,41 @@ const IP_TRANSFER_LABEL: Record<string, string> = {
     "The Provider retains all rights in the deliverables. The Client receives a worldwide, non-exclusive licence to use them once full payment is made.",
 };
 
-const TOOLTIP_IP_TRANSFER =
-  "Who owns the work product once payment is made. 'On full payment' is the design norm: you keep rights until the invoice clears, then transfer them. 'Retained until paid' means you license use but keep ownership. 'On signature' transfers immediately and is risky for the designer if payment slips.";
-const TOOLTIP_GOVERNING_LAW =
-  "The country (and by extension, court system) whose laws interpret this contract if you end up in dispute. Pick where the provider is based — easier to enforce locally. Cross-border disputes are expensive.";
-const TOOLTIP_KILL_FEE =
-  "If the client cancels mid-project, you keep this percentage of unbilled work as a cancellation fee. Industry standard: 25–50%.";
-const TOOLTIP_TERMINATION_NOTICE =
-  "How many days' written notice either party must give to end the contract. 14–30 days is typical. Shorter favors the client; longer favors the provider.";
-const TOOLTIP_PAYMENT_SCHEDULE =
-  "When the provider gets paid. 'Net 30' means within 30 days of invoice. 'Milestones' splits payment across deliverables. 'On completion' is risky for the provider — lots of money tied up.";
+const RATE_TYPE_OPT_DESC: Record<string, string> = {
+  hourly: "You bill for hours worked. Best for ongoing maintenance or unscoped work.",
+  fixed: "One total price for a defined deliverable. Best when scope is clear.",
+  retainer: "A recurring monthly amount. Best for long engagements.",
+};
+
+const PAYMENT_SCHEDULE_OPT_DESC: Record<string, string> = {
+  on_completion: "Invoice is due when the work is delivered.",
+  milestones: "Invoices follow named milestones in the scope.",
+  net_15: "Invoices are due 15 days after issue.",
+  net_30: "Invoices are due 30 days after issue.",
+};
+
+const IP_TRANSFER_OPT_DESC: Record<string, string> = {
+  on_full_payment:
+    "Recommended design norm. Rights transfer to the Client once you've been paid in full.",
+  on_signature:
+    "Risky for you — rights transfer the moment the contract is signed, before payment.",
+  retained_until_paid:
+    "You keep rights; Client gets a licence to use the work once paid in full.",
+};
+
+const HELP_GOVERNING_LAW =
+  "The legal system that interprets this contract. Pick where you (the Designer) are based — easier and cheaper to enforce locally.";
+
+function clientNameFor(answers: Record<string, unknown>): string {
+  const client = answers.client as
+    | { first?: string; family?: string; business?: string }
+    | undefined;
+  if (!client) return "The Client";
+  const business = client.business?.trim();
+  if (business) return business;
+  const personal = [client.first, client.family].filter(Boolean).join(" ").trim();
+  return personal || "The Client";
+}
 
 export const designQuestions: Question[] = [
   {
@@ -96,11 +127,13 @@ export const designQuestions: Question[] = [
     kind: "select",
     label: "Rate type",
     required: true,
+    help: "How you charge for this engagement. Pick one — the contract phrasing follows.",
     options: [
       { value: "hourly", label: "Hourly" },
       { value: "fixed", label: "Fixed project fee" },
       { value: "retainer", label: "Monthly retainer" },
     ],
+    optionDescriptions: RATE_TYPE_OPT_DESC,
   },
   {
     id: "rate_amount",
@@ -109,22 +142,36 @@ export const designQuestions: Question[] = [
     suffix: "€",
     min: 0,
     required: true,
+    dynamicHelp: (a) => {
+      const amt = typeof a.rate_amount === "number" ? a.rate_amount : null;
+      const rt = typeof a.rate_type === "string" ? a.rate_type : null;
+      if (!amt || !rt) return null;
+      const unit = RATE_TYPE_UNIT[rt] ?? "";
+      return `${clientNameFor(a)} will pay you €${amt.toLocaleString("en-US")} ${unit}.`.trim();
+    },
   },
   {
     id: "payment_schedule",
     kind: "select",
     label: "Payment schedule",
     required: true,
-    tooltip: TOOLTIP_PAYMENT_SCHEDULE,
+    help: "When invoices are due. Shorter schedules favor you.",
     options: [
       { value: "on_completion", label: "On completion" },
       { value: "milestones", label: "Milestones" },
       { value: "net_15", label: "Net 15" },
       { value: "net_30", label: "Net 30" },
     ],
+    optionDescriptions: PAYMENT_SCHEDULE_OPT_DESC,
   },
   { id: "start_date", kind: "date", label: "Start date" },
-  { id: "end_date", kind: "date", label: "Estimated end date" },
+  {
+    id: "end_date",
+    kind: "date",
+    label: "Estimated end date",
+    allowOpenEnded: true,
+    openLabel: "No estimated end date",
+  },
   {
     id: "revision_rounds",
     kind: "number",
@@ -140,19 +187,20 @@ export const designQuestions: Question[] = [
     defaultValue: 50,
     min: 0,
     max: 100,
-    tooltip: TOOLTIP_KILL_FEE,
+    help: "If the Client cancels mid-project, you keep this percentage of unbilled work. Industry standard: 25–50%.",
   },
   {
     id: "ip_transfer",
     kind: "select",
     label: "IP transfer",
     required: true,
-    tooltip: TOOLTIP_IP_TRANSFER,
+    help: "Who owns the work product once payment is made.",
     options: [
       { value: "on_full_payment", label: "On full payment" },
       { value: "on_signature", label: "On signature" },
       { value: "retained_until_paid", label: "Retained until paid" },
     ],
+    optionDescriptions: IP_TRANSFER_OPT_DESC,
   },
   {
     id: "portfolio_use",
@@ -167,15 +215,15 @@ export const designQuestions: Question[] = [
     suffix: "days",
     defaultValue: 14,
     min: 0,
-    tooltip: TOOLTIP_TERMINATION_NOTICE,
+    help: "Days of written notice either party must give to end the contract. 14–30 is typical.",
   },
   {
     id: "governing_law",
     kind: "select",
     label: "Governing law (country)",
     required: true,
-    tooltip: TOOLTIP_GOVERNING_LAW,
-    options: COUNTRIES.map((c) => ({ value: c.code, label: c.name })),
+    help: HELP_GOVERNING_LAW,
+    options: JURISDICTION_OPTIONS,
   },
 ];
 
@@ -207,12 +255,14 @@ const validator = z.object({
   payment_schedule: z.enum(["on_completion", "milestones", "net_15", "net_30"]),
   start_date: z.string().optional().default(""),
   end_date: z.string().optional().default(""),
+  end_date_open: z.boolean().optional().default(false),
   revision_rounds: z.coerce.number().int().min(0).default(3),
   kill_fee_pct: z.coerce.number().min(0).max(100).default(50),
   ip_transfer: z.enum(["on_full_payment", "on_signature", "retained_until_paid"]),
   portfolio_use: z.coerce.boolean().default(true),
   termination_notice: z.coerce.number().int().min(0).default(14),
   governing_law: z.string().min(2),
+  country_rider_on: z.boolean().optional().default(false),
 });
 
 type DesignAnswers = z.infer<typeof validator>;
@@ -223,6 +273,7 @@ function render(raw: Record<string, unknown>): string {
   const clientAddr = formatAddress(a.client_address);
   const providerParty = formatParty(a.provider);
   const providerAddr = formatAddress(a.provider_address);
+  const juris = getJurisdiction(a.governing_law);
 
   const parties = clauses("Parties", [
     `This Design Services Agreement is between ${clientParty} ("Client"), at ${clientAddr}, and ${providerParty} ("Designer"), at ${providerAddr}.`,
@@ -241,21 +292,27 @@ function render(raw: Record<string, unknown>): string {
     "Deliverables are considered accepted unless the Client provides written notice of specific issues within seven (7) days of delivery.",
   ]);
 
-  const payment = clauses("Payment", [
+  const paymentLines: string[] = [
     `The Client will pay the Designer ${formatCurrency(a.rate_amount)} as ${RATE_TYPE_LABEL[a.rate_type] ?? "the agreed fee"}.`,
     `Payment is due ${PAYMENT_SCHEDULE_LABEL[a.payment_schedule] ?? "as agreed"}.`,
     `If the Client cancels the project after work has commenced, the Client will pay a kill fee equal to ${fallback(a.kill_fee_pct, "the agreed percentage")}% of the total project fee, in addition to any milestones already invoiced.`,
     "Late payments accrue interest at the statutory rate or 1.5% per month, whichever is lower.",
     "Fees are exclusive of applicable taxes.",
-  ]);
+  ];
+  if (a.country_rider_on && juris?.rider?.id === "vat_reverse_charge") {
+    paymentLines.push(juris.rider.body);
+  }
+  const payment = clauses("Payment", paymentLines);
 
   const timeline = clauses("Timeline", [
     a.start_date
       ? `Work begins on ${formatDate(a.start_date)}.`
       : "Work begins on signature of this Agreement.",
-    a.end_date
-      ? `Estimated completion: ${formatDate(a.end_date)}, subject to Client feedback and approval timelines.`
-      : "The Parties will agree the completion date in writing once scope is finalised.",
+    a.end_date_open
+      ? "The engagement continues on a rolling basis until terminated by either Party in accordance with the Termination clause."
+      : a.end_date
+        ? `Estimated completion: ${formatDate(a.end_date)}, subject to Client feedback and approval timelines.`
+        : "The Parties will agree the completion date in writing once scope is finalised.",
     "Delays caused by the Client's feedback cycle extend the timeline accordingly.",
   ]);
 
@@ -278,12 +335,22 @@ function render(raw: Record<string, unknown>): string {
     "On termination, the Client will pay for all work performed and any applicable kill fee.",
   ]);
 
-  const general = clauses("General", [
-    `This Agreement is governed by the laws of ${formatCountry(a.governing_law)}. The Parties submit to the exclusive jurisdiction of the courts of that country.`,
+  const generalLines: string[] = [
+    juris
+      ? juris.governing_law_sentence
+      : `This Agreement is governed by the laws of ${a.governing_law}. The Parties submit to the exclusive jurisdiction of the courts of that country.`,
     "If any provision is held unenforceable, the remaining provisions remain in full force.",
     "This Agreement is the entire agreement between the Parties and supersedes prior discussions.",
     "Amendments require a writing signed (or electronically acknowledged) by both Parties.",
-  ]);
+  ];
+  if (
+    a.country_rider_on &&
+    juris?.rider &&
+    juris.rider.id !== "vat_reverse_charge"
+  ) {
+    generalLines.push(juris.rider.body);
+  }
+  const general = clauses("General", generalLines);
 
   const signatures = clauses("Signatures", [
     "**Client:** ____________________________   Date: ____________",

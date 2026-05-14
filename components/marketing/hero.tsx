@@ -3,19 +3,30 @@ import { HeroAnalyzer } from "@/components/marketing/hero-analyzer";
 
 export function Hero() {
   return (
-    <section className="hero">
+    <section className="hero hero--centerpiece">
       <div className="hero__bg" aria-hidden />
-      <div className="container hero__grid">
-        <div className="hero__left">
-          <span className="gf-tag">AI CONTRACT REVIEW · FREE FIRST SCAN</span>
-          <h1 className="gf-display hero__title">
+      <div className="container hero__stack">
+        <header className="hero__head">
+          <span className="gf-tag hero__eyebrow">
+            AI CONTRACT REVIEW · FREE FIRST SCAN
+          </span>
+          <h1 className="gf-h1 hero__title hero__title--compact">
             Get your contract{" "}
             <span style={{ color: "var(--green-500)" }}>green-flagged</span>.
           </h1>
-          <p className="hero__sub">
+          <p className="hero__sub hero__sub--compact">
             Drop any contract. Our AI scans every clause, ranks the risks, and
-            tells you exactly what to push back on — in plain English.
+            tells you exactly what to push back on.
           </p>
+        </header>
+
+        <div className="hero__centerpiece">
+          <div className="hero__centerpiece-main">
+            <HeroAnalyzer />
+          </div>
+        </div>
+
+        <div className="hero__foot">
           <div className="hero__cta">
             <Link href="/sign-in" className="gf-btn gf-btn-accent">
               Log in <span className="arrow">→</span>
@@ -38,9 +49,6 @@ export function Hero() {
               Informational, not legal advice
             </li>
           </ul>
-        </div>
-        <div>
-          <HeroAnalyzer />
         </div>
       </div>
     </section>

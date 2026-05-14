@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Info, Sparkles, Undo2 } from "lucide-react";
+import { Sparkles, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { COUNTRIES } from "@/lib/countries";
+import { Dropdown } from "@/components/ui/dropdown";
 import type {
   AddressValue,
   NameValue,
@@ -15,68 +16,52 @@ type Props = {
   value: unknown;
   onChange: (next: unknown) => void;
   error?: string | null;
+  /**
+   * All current answers, so dynamic help can reference other fields and the
+   * date question can read its sibling `${id}_open` boolean.
+   */
+  allAnswers?: Record<string, unknown>;
+  /** When end-date open toggles, parent gets the sibling key + value. */
+  onSiblingChange?: (key: string, value: unknown) => void;
 };
 
 function fieldId(q: Question): string {
   return `q-${q.id}`;
 }
 
-export function QuestionField({ question, value, onChange, error }: Props) {
+export function QuestionField({
+  question,
+  value,
+  onChange,
+  error,
+  allAnswers,
+  onSiblingChange,
+}: Props) {
   const id = fieldId(question);
-  const [tooltipOpen, setTooltipOpen] = React.useState(false);
+
+  const dynamicHelp = question.dynamicHelp?.(allAnswers ?? {}) ?? undefined;
+  const helpText = dynamicHelp ?? question.help ?? null;
 
   const label = (
-    <div
+    <label
+      htmlFor={id}
+      className="gf-mono-sm"
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        flexWrap: "wrap",
+        color: "var(--fg-2)",
+        textTransform: "uppercase",
+        letterSpacing: "0.04em",
+        fontSize: 12,
       }}
     >
-      <label
-        htmlFor={id}
-        className="gf-mono-sm"
-        style={{
-          color: "var(--fg-2)",
-          textTransform: "uppercase",
-          letterSpacing: "0.04em",
-          fontSize: 12,
-        }}
-      >
-        {question.label}
-        {question.required ? (
-          <span style={{ color: "var(--accent-strong)", marginLeft: 6 }}>*</span>
-        ) : null}
-      </label>
-      {question.tooltip ? (
-        <button
-          type="button"
-          aria-expanded={tooltipOpen}
-          aria-label="Show explanation"
-          onClick={() => setTooltipOpen((v) => !v)}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 22,
-            height: 22,
-            background: "transparent",
-            border: "1px solid var(--rule)",
-            color: tooltipOpen ? "var(--accent-strong)" : "var(--fg-3)",
-            cursor: "pointer",
-            padding: 0,
-            borderRadius: 2,
-            transition: "color 160ms ease, border-color 160ms ease",
-          }}
-        >
-          <Info size={14} />
-        </button>
+      {question.label}
+      {question.required ? (
+        <span style={{ color: "var(--accent-strong)", marginLeft: 6 }}>*</span>
       ) : null}
-    </div>
+    </label>
   );
 
   let control: React.ReactNode = null;
+  let belowControl: React.ReactNode = null;
 
   if (question.kind === "text") {
     const v = typeof value === "string" ? value : "";
@@ -106,21 +91,34 @@ export function QuestionField({ question, value, onChange, error }: Props) {
   } else if (question.kind === "select") {
     const v = typeof value === "string" ? value : "";
     control = (
-      <select
+      <Dropdown
         id={id}
-        className="gf-input"
-        value={v}
-        onChange={(e) => onChange(e.target.value)}
-        style={{ appearance: "auto" }}
-      >
-        <option value="">Select…</option>
-        {question.options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        value={v || null}
+        onChange={(next) => onChange(next)}
+        options={question.options}
+        placeholder="Select…"
+        aria-label={question.label}
+      />
     );
+    const desc =
+      v && question.optionDescriptions
+        ? question.optionDescriptions[v]
+        : undefined;
+    if (desc) {
+      belowControl = (
+        <p
+          className="gf-body-sm"
+          style={{
+            color: "var(--fg-3)",
+            margin: 0,
+            borderLeft: "2px solid var(--rule)",
+            paddingLeft: 10,
+          }}
+        >
+          {desc}
+        </p>
+      );
+    }
   } else if (question.kind === "number") {
     const v =
       typeof value === "number"
@@ -164,15 +162,44 @@ export function QuestionField({ question, value, onChange, error }: Props) {
     );
   } else if (question.kind === "date") {
     const v = typeof value === "string" ? value : "";
+    const openKey = `${question.id}_open`;
+    const isOpen = Boolean(allAnswers?.[openKey]);
     control = (
       <input
         id={id}
         className="gf-input"
         type="date"
-        value={v}
+        value={isOpen ? "" : v}
+        disabled={isOpen}
         onChange={(e) => onChange(e.target.value)}
+        style={isOpen ? { opacity: 0.55, cursor: "not-allowed" } : undefined}
       />
     );
+    if (question.allowOpenEnded) {
+      belowControl = (
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            cursor: "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={isOpen}
+            onChange={(e) => {
+              const next = e.target.checked;
+              onSiblingChange?.(openKey, next);
+              if (next) onChange("");
+            }}
+          />
+          <span className="gf-body-sm" style={{ color: "var(--fg-2)" }}>
+            {question.openLabel ?? "No estimated end date"}
+          </span>
+        </label>
+      );
+    }
   } else if (question.kind === "toggle") {
     const checked = typeof value === "boolean" ? value : !!question.defaultValue;
     control = (
@@ -292,23 +319,22 @@ export function QuestionField({ question, value, onChange, error }: Props) {
   } else if (question.kind === "address") {
     const v = (value && typeof value === "object" ? value : {}) as AddressValue;
     const set = (patch: Partial<AddressValue>) => onChange({ ...v, ...patch });
+    const countryOptions = COUNTRIES.map((c) => ({
+      value: c.code,
+      label: c.name,
+    }));
     control = (
       <div className="gf-addr-grid">
-        <select
-          id={id}
-          className="gf-input"
-          value={v.country ?? ""}
-          onChange={(e) => set({ country: e.target.value })}
-          style={{ appearance: "auto" }}
-          autoComplete="country"
-        >
-          <option value="">Country…</option>
-          {COUNTRIES.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <Dropdown
+            id={id}
+            value={v.country ?? null}
+            onChange={(next) => set({ country: next })}
+            options={countryOptions}
+            placeholder="Country…"
+            aria-label="Country"
+          />
+        </div>
         <input
           className="gf-input"
           type="text"
@@ -320,19 +346,18 @@ export function QuestionField({ question, value, onChange, error }: Props) {
         <input
           className="gf-input"
           type="text"
-          placeholder="Street address"
-          autoComplete="street-address"
-          value={v.street ?? ""}
-          onChange={(e) => set({ street: e.target.value })}
-          style={{ gridColumn: "1 / -1" }}
-        />
-        <input
-          className="gf-input"
-          type="text"
           placeholder="City"
           autoComplete="address-level2"
           value={v.city ?? ""}
           onChange={(e) => set({ city: e.target.value })}
+        />
+        <input
+          className="gf-input"
+          type="text"
+          placeholder="Street address"
+          autoComplete="street-address"
+          value={v.street ?? ""}
+          onChange={(e) => set({ street: e.target.value })}
           style={{ gridColumn: "1 / -1" }}
         />
       </div>
@@ -360,23 +385,19 @@ export function QuestionField({ question, value, onChange, error }: Props) {
       }}
     >
       {label}
-      {tooltipOpen && question.tooltip ? (
-        <div
+      {control}
+      {belowControl}
+      {helpText ? (
+        <p
           className="gf-body-sm"
           style={{
             color: "var(--fg-3)",
-            borderLeft: "2px solid var(--rule)",
-            paddingLeft: 12,
             margin: 0,
+            fontSize: 13,
+            lineHeight: 1.5,
           }}
         >
-          {question.tooltip}
-        </div>
-      ) : null}
-      {control}
-      {"help" in question && question.help ? (
-        <p className="gf-body-sm" style={{ color: "var(--fg-3)", margin: 0 }}>
-          {question.help}
+          {helpText}
         </p>
       ) : null}
       {error ? (

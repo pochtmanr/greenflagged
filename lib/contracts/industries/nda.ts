@@ -1,14 +1,14 @@
 import { z } from "zod";
-import { COUNTRIES, COUNTRY_CODES } from "@/lib/countries";
+import { COUNTRY_CODES } from "@/lib/countries";
 import type { IndustrySchema, Question } from "../types";
 import {
   FOOTER,
   clauses,
   fallback,
   formatAddress,
-  formatCountry,
   formatParty,
 } from "../format";
+import { JURISDICTION_OPTIONS, getJurisdiction } from "../jurisdictions";
 
 const CARVE_OUT_OPTIONS = [
   { value: "prior", label: "Prior knowledge" },
@@ -28,12 +28,12 @@ const CARVE_OUT_TEXT: Record<string, string> = {
     "is required to be disclosed by law, court order, or government authority (provided the Receiving Party gives prompt notice where lawfully permitted)",
 };
 
-const TOOLTIP_SURVIVAL =
-  "If ON: the confidentiality obligations continue after the NDA ends. Usual for trade secrets — they don't stop being secret when the contract expires.";
-const TOOLTIP_CARVE_OUTS =
-  "Information that isn't covered by the NDA. The 4 default carve-outs are standard: things the receiving party already knew, developed independently, became public, or has to disclose by law.";
-const TOOLTIP_GOVERNING_LAW =
-  "The country (and by extension, court system) whose laws interpret this contract if you end up in dispute. Pick where the provider is based — easier to enforce locally. Cross-border disputes are expensive.";
+const HELP_SURVIVAL =
+  "When on, confidentiality obligations continue after the NDA ends. Standard for trade secrets — they don't stop being secret when the contract expires.";
+const HELP_CARVE_OUTS =
+  "Information that isn't covered by the NDA. The four defaults are standard.";
+const HELP_GOVERNING_LAW =
+  "The legal system that interprets this NDA. Pick where you (or the disclosing party) are based — easier and cheaper to enforce locally.";
 
 export const ndaQuestions: Question[] = [
   {
@@ -94,7 +94,7 @@ export const ndaQuestions: Question[] = [
     kind: "toggle",
     label: "Confidentiality survives termination?",
     defaultValue: true,
-    tooltip: TOOLTIP_SURVIVAL,
+    help: HELP_SURVIVAL,
   },
   {
     id: "carve_outs",
@@ -102,15 +102,15 @@ export const ndaQuestions: Question[] = [
     label: "Standard carve-outs",
     options: [...CARVE_OUT_OPTIONS],
     defaultValue: ["prior", "independent", "public", "legal"],
-    tooltip: TOOLTIP_CARVE_OUTS,
+    help: HELP_CARVE_OUTS,
   },
   {
     id: "governing_law",
     kind: "select",
     label: "Governing law (country)",
     required: true,
-    tooltip: TOOLTIP_GOVERNING_LAW,
-    options: COUNTRIES.map((c) => ({ value: c.code, label: c.name })),
+    help: HELP_GOVERNING_LAW,
+    options: JURISDICTION_OPTIONS,
   },
 ];
 
@@ -143,6 +143,7 @@ const validator = z.object({
     .array(z.enum(["prior", "independent", "public", "legal"]))
     .default(["prior", "independent", "public", "legal"]),
   governing_law: z.string().min(2),
+  country_rider_on: z.boolean().optional().default(false),
 });
 
 type NdaAnswers = z.infer<typeof validator>;
@@ -153,6 +154,7 @@ function render(raw: Record<string, unknown>): string {
   const discloserAddr = formatAddress(a.disclosing_party_address);
   const receiver = formatParty(a.receiving_party);
   const receiverAddr = formatAddress(a.receiving_party_address);
+  const juris = getJurisdiction(a.governing_law);
 
   const partiesRole = a.mutual
     ? `("Party A"), at ${discloserAddr}, and ${receiver} ("Party B"), at ${receiverAddr}. Each Party may disclose Confidential Information to the other and each Party is bound by the same obligations as Receiving Party in respect of Confidential Information it receives.`
@@ -186,13 +188,23 @@ function render(raw: Record<string, unknown>): string {
       : "The obligations of confidentiality terminate with this Agreement, except as required by law.",
   ]);
 
-  const general = clauses("General", [
-    `This Agreement is governed by the laws of ${formatCountry(a.governing_law)} without reference to its conflict-of-laws rules. The Parties submit to the exclusive jurisdiction of the courts of that country.`,
+  const generalLines: string[] = [
+    juris
+      ? juris.governing_law_sentence
+      : `This Agreement is governed by the laws of ${a.governing_law} without reference to its conflict-of-laws rules. The Parties submit to the exclusive jurisdiction of the courts of that country.`,
     "This Agreement is the entire agreement between the Parties on its subject matter and supersedes prior discussions.",
     "If any provision is held unenforceable, the remaining provisions remain in full force.",
     "Amendments require a writing signed (or electronically acknowledged) by both Parties.",
     "Nothing in this Agreement grants either Party any licence in the other Party's intellectual property except the limited right to use Confidential Information for the Purpose.",
-  ]);
+  ];
+  if (
+    a.country_rider_on &&
+    juris?.rider &&
+    juris.rider.id !== "vat_reverse_charge"
+  ) {
+    generalLines.push(juris.rider.body);
+  }
+  const general = clauses("General", generalLines);
 
   const signatures = clauses("Signatures", [
     `**${a.mutual ? "Party A" : "Disclosing Party"}:** ____________________________   Date: ____________`,

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { SectionHeading } from "@/components/marketing/section-heading";
+import { Reveal } from "@/components/marketing/reveal";
 
 const ITEMS = [
   {
@@ -48,9 +49,11 @@ export function FAQ() {
         />
         <div className="faq">
           {ITEMS.map((it, i) => (
-            <div
+            <Reveal
               key={i}
+              as="div"
               className={"faq__row " + (open === i ? "is-open" : "")}
+              delayMs={i * 40}
             >
               <button
                 type="button"
@@ -67,7 +70,7 @@ export function FAQ() {
                 </span>
               </button>
               {open === i ? <p className="faq__a">{it.a}</p> : null}
-            </div>
+            </Reveal>
           ))}
         </div>
       </div>

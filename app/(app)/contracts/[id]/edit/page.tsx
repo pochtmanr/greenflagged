@@ -38,17 +38,28 @@ export default async function ContractEditPage({ params }: Props) {
   if (cErr || !contract) notFound();
   if (contract.owner_id !== user.id) notFound();
   if (contract.kind !== "drafted") {
-    // Scans aren't editable in this UI — bounce to the view page.
     redirect(`/contracts/${id}`);
   }
 
-  const { data: latest } = await supabase
+  // body_md_translations added in migration 0008. Supabase types aren't
+  // regenerated yet, so cast through `any` like the rest of the codebase does
+  // for post-migration columns.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any;
+  const { data: latest } = (await sb
     .from("contract_versions")
-    .select("id, version, body_md")
+    .select("id, version, body_md, body_md_translations")
     .eq("contract_id", id)
     .order("version", { ascending: false })
     .limit(1)
-    .maybeSingle();
+    .maybeSingle()) as {
+    data: {
+      id: string;
+      version: number;
+      body_md: string | null;
+      body_md_translations: Record<string, string> | null;
+    } | null;
+  };
 
   const { data: profilesRows } = await supabase
     .from("business_profiles")
@@ -56,23 +67,30 @@ export default async function ContractEditPage({ params }: Props) {
     .order("is_default", { ascending: false })
     .order("created_at", { ascending: false });
 
-  const profiles = (profilesRows ?? []).map((p) => ({
-    id: p.id,
-    label:
+  const profiles = (profilesRows ?? []).map((p) => {
+    const personal = [p.first_name, p.family_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    const label =
       p.label ||
       p.business_name ||
-      [p.first_name, p.family_name].filter(Boolean).join(" ") ||
-      "Untitled profile",
-    has_logo: Boolean(p.logo_path),
-    is_default: Boolean(p.is_default),
-  }));
+      (personal.length > 0 ? personal : "Untitled profile");
+    return {
+      id: p.id,
+      label,
+      has_logo: Boolean(p.logo_path),
+      is_default: Boolean(p.is_default),
+    };
+  });
 
   const initialStyle = coerceStyle(contract.style) ?? DEFAULT_STYLE;
+  const cachedTranslations = latest?.body_md_translations ?? null;
 
   return (
     <section className="section" style={{ paddingTop: 64 }}>
       <div className="app-shell">
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <Link
             href={`/contracts/${id}`}
             className="gf-btn-link"
@@ -81,16 +99,18 @@ export default async function ContractEditPage({ params }: Props) {
             ← Back to contract
           </Link>
 
-          <header style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
+          <header style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span
+              className="gf-label"
+              style={{ color: "var(--accent-strong)" }}
+            >
               // EDIT CONTRACT
             </span>
-            <h1 className="gf-h2" style={{ marginTop: 0 }}>
-              {contract.title ?? "Untitled contract"}
-            </h1>
-            <p className="gf-body-sm" style={{ color: "var(--fg-3)" }}>
-              Edit the body, pick a style, and choose which business profile signs it.
-              Save creates a new version.
+            <p
+              className="gf-mono-sm"
+              style={{ color: "var(--fg-3)", margin: 0 }}
+            >
+              Saving creates a new version.
             </p>
           </header>
 
@@ -100,6 +120,7 @@ export default async function ContractEditPage({ params }: Props) {
             initialBodyMd={latest?.body_md ?? ""}
             initialStyle={initialStyle}
             initialBusinessProfileId={contract.business_profile_id}
+            initialTranslations={cachedTranslations}
             profiles={profiles}
           />
         </div>

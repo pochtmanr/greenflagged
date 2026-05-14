@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 
 type Severity = "green" | "yellow" | "orange" | "red";
+type Mode = "upload" | "paste";
 type Phase = "idle" | "ready" | "submitting" | "done" | "error";
 
 type PreviewResponse = {
@@ -22,50 +23,115 @@ const SEVERITY_LABEL: Record<Severity, string> = {
   red: "DO NOT SIGN",
 };
 
-const STATUS_COPY: Record<Phase, string> = {
-  idle: "AWAITING PASTE",
-  ready: "READY · PASTE LOOKS GOOD",
-  submitting: "REVIEWING WITH AI…",
-  done: "VERDICT READY",
-  error: "REVIEW FAILED",
+const STATUS_COPY: Record<Mode, Record<Phase, string>> = {
+  upload: {
+    idle: "WAITING FOR FILE",
+    ready: "READY · FILE LOOKS GOOD",
+    submitting: "REVIEWING WITH AI…",
+    done: "VERDICT READY",
+    error: "REVIEW FAILED",
+  },
+  paste: {
+    idle: "AWAITING PASTE",
+    ready: "READY · PASTE LOOKS GOOD",
+    submitting: "REVIEWING WITH AI…",
+    done: "VERDICT READY",
+    error: "REVIEW FAILED",
+  },
 };
 
 const MIN_CHARS = 200;
 const MAX_CHARS = 30_000;
+const MAX_FILE_BYTES = 5 * 1024 * 1024; // mirrors API preview limit
+const ACCEPTED = ".pdf,.docx,.txt";
+
+function formatSize(bytes: number) {
+  if (bytes >= 1_048_576) return (bytes / 1_048_576).toFixed(2) + " MB";
+  if (bytes >= 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return bytes + " B";
+}
 
 export function HeroAnalyzer() {
+  const [mode, setMode] = React.useState<Mode>("upload");
   const [text, setText] = React.useState("");
+  const [file, setFile] = React.useState<File | null>(null);
+  const [drag, setDrag] = React.useState(false);
   const [phase, setPhase] = React.useState<Phase>("idle");
   const [error, setError] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<PreviewResponse | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const charCount = text.length;
   const canSubmit =
-    phase !== "submitting" && charCount >= MIN_CHARS && charCount <= MAX_CHARS;
+    phase !== "submitting" &&
+    (mode === "paste"
+      ? charCount >= MIN_CHARS && charCount <= MAX_CHARS
+      : file !== null);
 
-  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setText(e.target.value);
+  function resetResult() {
     if (phase === "done" || phase === "error") {
-      setPhase(e.target.value.length >= MIN_CHARS ? "ready" : "idle");
       setResult(null);
       setError(null);
-    } else if (e.target.value.length >= MIN_CHARS) {
+    }
+  }
+
+  function switchMode(next: Mode) {
+    if (next === mode) return;
+    setMode(next);
+    setPhase("idle");
+    setError(null);
+    setResult(null);
+    setText("");
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function onTextChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    setText(e.target.value);
+    resetResult();
+    if (e.target.value.length >= MIN_CHARS) {
       setPhase("ready");
     } else {
       setPhase("idle");
     }
-  };
+  }
 
-  const submit = async () => {
+  function pickFile(f: File | undefined | null) {
+    if (!f) return;
+    if (f.size > MAX_FILE_BYTES) {
+      setError(
+        `${f.name} is ${formatSize(f.size)} — free preview accepts files up to 5 MB.`,
+      );
+      setPhase("error");
+      setFile(null);
+      return;
+    }
+    setFile(f);
+    setError(null);
+    setResult(null);
+    setPhase("ready");
+  }
+
+  async function submit() {
     if (!canSubmit) return;
     setPhase("submitting");
     setError(null);
     try {
-      const res = await fetch("/api/scan/preview", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
+      let res: Response;
+      if (mode === "upload" && file) {
+        const form = new FormData();
+        form.append("file", file);
+        res = await fetch("/api/scan/preview", {
+          method: "POST",
+          body: form,
+        });
+      } else {
+        res = await fetch("/api/scan/preview", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+      }
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as
           | { error?: string }
@@ -81,7 +147,18 @@ export function HeroAnalyzer() {
       setError(err instanceof Error ? err.message : "Network error");
       setPhase("error");
     }
-  };
+  }
+
+  const sourceLabel = (() => {
+    if (mode === "upload") return file ? file.name : "—";
+    return text ? "Pasted text" : "—";
+  })();
+  const sizeLabel = (() => {
+    if (mode === "upload") return file ? formatSize(file.size) : "—";
+    return text
+      ? `${charCount.toLocaleString()} / ${MAX_CHARS.toLocaleString()} chars`
+      : `0 / ${MAX_CHARS.toLocaleString()} chars`;
+  })();
 
   return (
     <div className="hero-analyzer">
@@ -91,34 +168,92 @@ export function HeroAnalyzer() {
       <span className="hero-analyzer__br" aria-hidden />
 
       <div className="hero-analyzer__head">
-        <span className="gf-label">// instant verdict · paste any contract</span>
-        <span
-          className="gf-mono-sm"
-          style={{ color: "var(--fg-3)" }}
-        >
-          no signup · powered by Claude
-        </span>
+        <span className="gf-label">// instant verdict · drop or paste</span>
+        <div className="hero-analyzer__mode">
+          <button
+            type="button"
+            className="gf-btn-link"
+            onClick={() => switchMode("upload")}
+            disabled={phase === "submitting"}
+            aria-pressed={mode === "upload"}
+            style={{ opacity: mode === "upload" ? 1 : 0.55 }}
+          >
+            Upload
+          </button>
+          <span className="gf-mono-sm" style={{ color: "var(--fg-4)" }}>
+            ·
+          </span>
+          <button
+            type="button"
+            className="gf-btn-link"
+            onClick={() => switchMode("paste")}
+            disabled={phase === "submitting"}
+            aria-pressed={mode === "paste"}
+            style={{ opacity: mode === "paste" ? 1 : 0.55 }}
+          >
+            Paste text
+          </button>
+        </div>
       </div>
 
-      <div className="hero-analyzer__field">
-        <textarea
-          value={text}
-          onChange={onChange}
-          spellCheck={false}
-          aria-label="Paste contract text"
-          placeholder="Paste your contract here. Even one clause works. We'll flag the risky parts and tell you what to push back on…"
-          maxLength={MAX_CHARS + 1000}
-          rows={8}
-        />
-      </div>
+      {mode === "upload" ? (
+        <label
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (phase !== "submitting") setDrag(true);
+          }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDrag(false);
+            if (phase === "submitting") return;
+            pickFile(e.dataTransfer.files?.[0]);
+          }}
+          className={"hero-analyzer__drop " + (drag ? "is-drag" : "")}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED}
+            onChange={(e) => pickFile(e.target.files?.[0])}
+            style={{ display: "none" }}
+          />
+          <div className="hero-analyzer__drop-glyph">↑</div>
+          <div className="hero-analyzer__drop-title">
+            {file
+              ? file.name
+              : "Drop a contract (PDF, DOCX, .txt) — or tap to browse"}
+          </div>
+          <div className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
+            {file
+              ? `${formatSize(file.size)} · ready for the free preview`
+              : "Up to 5 MB · we never store your file"}
+          </div>
+        </label>
+      ) : (
+        <div className="hero-analyzer__field">
+          <textarea
+            value={text}
+            onChange={onTextChange}
+            spellCheck={false}
+            aria-label="Paste contract text"
+            placeholder="Paste your contract here. Even one clause works. We'll flag the risky parts and tell you what to push back on…"
+            maxLength={MAX_CHARS + 1000}
+            rows={8}
+          />
+        </div>
+      )}
 
       <div className="hero-analyzer__specs">
         <div className="gf-specrow">
-          <span className="key">CHARS</span>
+          <span className="key">SOURCE</span>
           <span className="dots" />
-          <span className="val">
-            {charCount.toLocaleString()} / {MAX_CHARS.toLocaleString()}
-          </span>
+          <span className="val">{sourceLabel}</span>
+        </div>
+        <div className="gf-specrow">
+          <span className="key">SIZE</span>
+          <span className="dots" />
+          <span className="val">{sizeLabel}</span>
         </div>
         <div className="gf-specrow" style={{ borderBottom: "none" }}>
           <span className="key">STATUS</span>
@@ -134,7 +269,7 @@ export function HeroAnalyzer() {
                   : "var(--fg-2)",
             }}
           >
-            {STATUS_COPY[phase]}
+            {STATUS_COPY[mode][phase]}
           </span>
         </div>
       </div>

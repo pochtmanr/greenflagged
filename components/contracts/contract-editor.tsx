@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -8,7 +9,10 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "tiptap-markdown";
 import type { ContractStyle } from "@/lib/pdf/themes";
+import type { Locale } from "@/lib/contracts/i18n";
 import { StyleSidebar } from "./style-sidebar";
+import { AiTweakPanel } from "./ai-tweak-panel";
+import { LanguagePanel } from "./language-panel";
 
 type ProfileOption = {
   id: string;
@@ -23,6 +27,7 @@ type Props = {
   initialBodyMd: string;
   initialStyle: ContractStyle;
   initialBusinessProfileId: string | null;
+  initialTranslations: Record<string, string> | null;
   profiles: ProfileOption[];
 };
 
@@ -38,6 +43,7 @@ export function ContractEditor({
   initialBodyMd,
   initialStyle,
   initialBusinessProfileId,
+  initialTranslations,
   profiles,
 }: Props) {
   const router = useRouter();
@@ -47,6 +53,9 @@ export function ContractEditor({
     initialBusinessProfileId,
   );
   const [saveState, setSaveState] = React.useState<SaveOutcome>({ kind: "idle" });
+  const [translations, setTranslations] = React.useState<Record<string, string>>(
+    initialTranslations ?? {},
+  );
 
   const editor = useEditor({
     extensions: [
@@ -89,8 +98,21 @@ export function ContractEditor({
     return editor.getText();
   }, [editor, initialBodyMd]);
 
+  const applyAiRevision = React.useCallback(
+    (nextBodyMd: string) => {
+      if (editor) {
+        editor.commands.setContent(nextBodyMd, { emitUpdate: false });
+      }
+      // Editing the canonical body invalidates any cached translations.
+      setTranslations({});
+    },
+    [editor],
+  );
+
   const save = React.useCallback(
-    async (): Promise<{ ok: true; version: number } | { ok: false; message: string }> => {
+    async (): Promise<
+      { ok: true; version: number } | { ok: false; message: string }
+    > => {
       setSaveState({ kind: "saving" });
       const body_md = serializeMarkdown();
       try {
@@ -125,12 +147,8 @@ export function ContractEditor({
   const downloadAfterSave = async (format: "pdf" | "docx") => {
     const result = await save();
     if (!result.ok) return;
-    // Use top-level navigation so the browser handles the download dialog.
-    window.location.href = `/api/contracts/${contractId}/${format}`;
-  };
-
-  const previewPdf = () => {
-    window.open(`/api/contracts/${contractId}/pdf`, "_blank", "noopener,noreferrer");
+    const suffix = format === "pdf" ? "?download=1" : "";
+    window.location.href = `/api/contracts/${contractId}/${format}${suffix}`;
   };
 
   return (
@@ -152,7 +170,10 @@ export function ContractEditor({
           {editor ? (
             <EditorContent editor={editor} />
           ) : (
-            <p className="gf-body-sm" style={{ color: "var(--fg-3)", margin: 0 }}>
+            <p
+              className="gf-body-sm"
+              style={{ color: "var(--fg-3)", margin: 0 }}
+            >
               Loading editor…
             </p>
           )}
@@ -160,25 +181,27 @@ export function ContractEditor({
       </div>
 
       <aside className="contract-editor__sidebar">
-        <StyleSidebar
-          value={style}
-          onChange={setStyle}
-          profiles={profiles}
-          selectedProfileId={businessProfileId}
-          onProfileChange={setBusinessProfileId}
-        />
-
-        <div className="gf-card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <button type="button" className="gf-btn" onClick={previewPdf}>
-            Preview PDF <span className="arrow">→</span>
-          </button>
+        <div
+          className="gf-card"
+          style={{ display: "flex", flexDirection: "column", gap: 10 }}
+        >
+          <Link
+            href={`/contracts/${contractId}/preview`}
+            className="gf-btn"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Preview <span className="arrow">→</span>
+          </Link>
           <button
             type="button"
-            className="gf-btn"
+            className="gf-btn-ghost"
             onClick={() => downloadAfterSave("pdf")}
             disabled={saveState.kind === "saving"}
           >
-            {saveState.kind === "saving" ? "Saving…" : "Save & download PDF"}
+            {saveState.kind === "saving"
+              ? "Saving…"
+              : "Save & download PDF"}
           </button>
           <button
             type="button"
@@ -190,7 +213,7 @@ export function ContractEditor({
           </button>
           <button
             type="button"
-            className="gf-btn-ghost"
+            className="gf-btn"
             onClick={async () => {
               const result = await save();
               if (result.ok) router.refresh();
@@ -200,16 +223,40 @@ export function ContractEditor({
             {saveState.kind === "saving" ? "Saving…" : "Save"}
           </button>
           {saveState.kind === "saved" ? (
-            <p className="gf-mono-sm" style={{ color: "var(--accent-strong)", margin: 0 }}>
+            <p
+              className="gf-mono-sm"
+              style={{ color: "var(--accent-strong)", margin: 0 }}
+            >
               Saved · v{saveState.version}
             </p>
           ) : null}
           {saveState.kind === "error" ? (
-            <p className="gf-mono-sm" style={{ color: "var(--sev-red)", margin: 0 }}>
+            <p
+              className="gf-mono-sm"
+              style={{ color: "var(--sev-red)", margin: 0 }}
+            >
               {saveState.message}
             </p>
           ) : null}
         </div>
+
+        <AiTweakPanel contractId={contractId} onApply={applyAiRevision} />
+
+        <LanguagePanel
+          contractId={contractId}
+          cached={translations}
+          onCacheUpdated={(loc, body) =>
+            setTranslations((prev) => ({ ...prev, [loc]: body }))
+          }
+        />
+
+        <StyleSidebar
+          value={style}
+          onChange={setStyle}
+          profiles={profiles}
+          selectedProfileId={businessProfileId}
+          onProfileChange={setBusinessProfileId}
+        />
       </aside>
       <EditorStyles />
     </div>
@@ -303,7 +350,7 @@ function EditorStyles() {
     <style>{`
       .contract-editor__grid {
         display: grid;
-        grid-template-columns: minmax(0, 960px) 320px;
+        grid-template-columns: minmax(0, 1fr) 320px;
         gap: 32px;
         align-items: start;
       }
@@ -312,6 +359,13 @@ function EditorStyles() {
         .contract-editor__sidebar { order: -1; position: static !important; }
       }
       .contract-editor__main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+      .contract-editor__sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        position: sticky;
+        top: 96px;
+      }
       .contract-editor__title-row { display: flex; }
       .contract-editor__title {
         font-size: 22px;
@@ -397,13 +451,6 @@ function EditorStyles() {
         color: var(--fg-4);
         pointer-events: none;
         height: 0;
-      }
-      .contract-editor__sidebar {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        position: sticky;
-        top: 96px;
       }
     `}</style>
   );

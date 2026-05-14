@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { Reveal } from "@/components/marketing/reveal";
 
 export function CTA() {
   return (
     <section className="cta">
-      <div className="container cta__inner">
+      <Reveal as="div" className="container cta__inner">
         <div>
           <span className="gf-label cta__label">// LAST CALL</span>
           <h2 className="gf-h1 cta__title">Don&apos;t sign anything risky.</h2>
@@ -20,7 +21,7 @@ export function CTA() {
             encrypted · auto-deleted · informational, not legal advice
           </span>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }

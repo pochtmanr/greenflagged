@@ -1,7 +1,7 @@
 import { Hero } from "@/components/marketing/hero";
 import { ThreeStep } from "@/components/marketing/three-step";
 import { SampleVerdict } from "@/components/marketing/sample-verdict";
-import { ClauseGrid } from "@/components/marketing/clause-grid";
+import { ArtInterlude } from "@/components/marketing/art-interlude";
 import { Pricing } from "@/components/marketing/pricing";
 import { FAQ } from "@/components/marketing/faq";
 import { CTA } from "@/components/marketing/cta";
@@ -19,7 +19,7 @@ export default async function HomePage() {
       <Hero />
       <ThreeStep />
       <SampleVerdict />
-      <ClauseGrid />
+      <ArtInterlude />
       <Pricing signedIn={signedIn} />
       <FAQ />
       <CTA />

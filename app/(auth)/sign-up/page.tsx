@@ -11,16 +11,9 @@ export const metadata: Metadata = {
 
 export default function SignUpPage() {
   return (
-    <section className="section" style={{ paddingTop: 96 }}>
+    <section className="section auth-section">
       <div className="container">
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1.05fr 1fr",
-            gap: 64,
-          }}
-          className="hero__grid"
-        >
+        <div className="hero__grid auth-grid">
           <div className="hero__left">
             <span className="gf-tag">SIGN UP · GREEN FLAGGED</span>
             <h1 className="gf-h1">
