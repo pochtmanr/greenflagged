@@ -62,8 +62,17 @@ export async function POST(req: NextRequest) {
     ? `Green Flagged ${PLANS[planId].label} (${PLANS[planId].interval})`
     : `${quantity} contract credit${quantity === 1 ? "" : "s"} — Green Flagged`;
 
-  const origin = req.nextUrl.origin;
-  const redirect_url = `${origin}/settings/billing?from=checkout`;
+  // Revolut production rejects redirect URLs whose host is `localhost` or a
+  // private IP. Prefer NEXT_PUBLIC_SITE_URL if set; otherwise fall back to
+  // the request origin — and if that origin is local, omit `redirect_url`
+  // entirely so Revolut renders its own success screen instead of 400'ing
+  // the order on a `host must not be equal to localhost` validation error.
+  const configuredSite = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  const baseHost = configuredSite ?? req.nextUrl.origin;
+  const isLocalHost = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(baseHost);
+  const redirect_url = isLocalHost
+    ? undefined
+    : `${baseHost}/settings/billing?from=checkout`;
 
   // Create the Revolut order. `save_payment_method_for_merchant` is true for
   // both subscriptions (renewals) and PAYG (so the same saved card can later
