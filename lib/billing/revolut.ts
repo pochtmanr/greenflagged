@@ -16,11 +16,20 @@ function env(key: string): string {
 }
 
 function getApiBase(): string {
-  return env("REVOLUT_API_BASE");
+  // REVOLUT_ENVIRONMENT is the canonical switch the user keeps in .env.
+  // Anything other than the literal "sandbox" hits production. Both bases
+  // share the same /api/* path layout.
+  const envName = process.env.REVOLUT_ENVIRONMENT;
+  if (!envName) {
+    throw new Error("Missing required env: REVOLUT_ENVIRONMENT");
+  }
+  return envName === "sandbox"
+    ? "https://sandbox-merchant.revolut.com"
+    : "https://merchant.revolut.com";
 }
 
 function getApiKey(): string {
-  return env("REVOLUT_API_KEY");
+  return env("REVOLUT_SECRET_KEY");
 }
 
 function getWebhookSecret(): string {

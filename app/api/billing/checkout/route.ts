@@ -68,20 +68,28 @@ export async function POST(req: NextRequest) {
   // Create the Revolut order. `save_payment_method_for_merchant` is true for
   // both subscriptions (renewals) and PAYG (so the same saved card can later
   // cover Standard overages — prompt12 wires the MIT charge).
-  const order = await createOrder({
-    amount_cents,
-    currency,
-    description,
-    customer_email: user.email,
-    redirect_url,
-    save_payment_method_for_merchant: true,
-    metadata: {
-      user_id: user.id,
-      kind: isSubscription ? "subscription_initial" : "one_off",
-      plan: planId ?? "",
-      quantity: String(quantity),
-    },
-  });
+  let order;
+  try {
+    order = await createOrder({
+      amount_cents,
+      currency,
+      description,
+      customer_email: user.email,
+      redirect_url,
+      save_payment_method_for_merchant: true,
+      metadata: {
+        user_id: user.id,
+        kind: isSubscription ? "subscription_initial" : "one_off",
+        plan: planId ?? "",
+        quantity: String(quantity),
+      },
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { error: "revolut_create_failed", detail: (err as Error).message },
+      { status: 502 },
+    );
+  }
 
   // Audit row — webhook will flip the status to succeeded on ORDER_COMPLETED.
   const service = getSupabaseServiceRole();
