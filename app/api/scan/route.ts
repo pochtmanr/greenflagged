@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { reviewContract } from "@/lib/ai/review";
 import { guardQuota } from "@/lib/billing/guard";
+import { chargeOverage } from "@/lib/billing/revolut";
 import { extensionFor, extractContractText, truncate } from "@/lib/parse";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
@@ -92,7 +93,7 @@ export async function POST(req: Request) {
     return bad("Sign in required", 401, "unauthenticated");
   }
 
-  const { blocked } = await guardQuota(user.id, "scan");
+  const { blocked, reserved } = await guardQuota(user.id, "scan");
   if (blocked) return blocked;
 
   const payload = await readPayload(req);
@@ -188,6 +189,15 @@ export async function POST(req: Request) {
     kind: "scan",
     contract_id: contractId,
   });
+
+  // Standard tier over included cap: bill the $3 MIT overage out-of-band so
+  // the user's response time isn't bound to Revolut latency. Failures flip
+  // the subscription to past_due + send an ops alert.
+  if (reserved && reserved.ok && reserved.overage) {
+    void chargeOverage(user.id, contractId).catch((err) => {
+      console.error("[overage] chargeOverage threw", err);
+    });
+  }
 
   return NextResponse.json({ contract_id: contractId, severity: result.severity });
 }

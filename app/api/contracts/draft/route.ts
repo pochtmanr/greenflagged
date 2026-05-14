@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { guardQuota } from "@/lib/billing/guard";
+import { chargeOverage } from "@/lib/billing/revolut";
 import { getIndustry } from "@/lib/contracts";
 import { renderContractPdf } from "@/lib/pdf/render";
 import { isContractStyle, type ContractStyle } from "@/lib/pdf/themes";
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { blocked } = await guardQuota(user.id, "draft");
+  const { blocked, reserved } = await guardQuota(user.id, "draft");
   if (blocked) return blocked;
 
   let bodyMd: string;
@@ -183,6 +184,15 @@ export async function POST(req: Request) {
     kind: "draft",
     contract_id: contractId,
   });
+
+  // Standard tier over included cap: bill the $3 MIT overage out-of-band so
+  // the user's draft completes without waiting on Revolut. Failures flip the
+  // subscription to past_due + send an ops alert.
+  if (reserved && reserved.ok && reserved.overage) {
+    void chargeOverage(user.id, contractId).catch((err) => {
+      console.error("[overage] chargeOverage threw", err);
+    });
+  }
 
   return NextResponse.json({ contract_id: contractId, title });
 }
