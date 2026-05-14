@@ -65,7 +65,7 @@ Source markdown:
 ${body_md}`;
 
   const out = await complete({
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     system: SYSTEM_PROMPT,
     user: userPrompt,
     maxTokens: 8000,

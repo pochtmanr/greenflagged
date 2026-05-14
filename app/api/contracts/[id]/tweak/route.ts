@@ -81,7 +81,7 @@ ${payload.instruction}`;
   let revised: string;
   try {
     revised = await complete({
-      model: "gpt-4o",
+      // No explicit model — defaults to gpt-5.4-mini via lib/ai/models.ts.
       system: TWEAK_SYSTEM,
       user: userPrompt,
       maxTokens: 16000,

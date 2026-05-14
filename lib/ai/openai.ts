@@ -14,8 +14,12 @@ function getClient(): OpenAI {
   return new OpenAI({ apiKey });
 }
 
+import { DEFAULT_MODEL_ID } from "./models";
+
 function getModel(): string {
-  return process.env.OPENAI_DRAFT_MODEL ?? "gpt-4o";
+  // Pinned to the catalog default. `OPENAI_DRAFT_MODEL` is intentionally
+  // ignored — see lib/ai/models.ts for the canonical model registry.
+  return DEFAULT_MODEL_ID;
 }
 
 export const openaiProvider: DraftProvider = {

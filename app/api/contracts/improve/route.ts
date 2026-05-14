@@ -9,7 +9,6 @@ export const dynamic = "force-dynamic";
 const Body = z.object({
   text: z.string().min(1).max(4000),
   field_kind: z.enum(["scope", "deliverables"]),
-  model: z.string().optional(),
 });
 
 const SYSTEMS: Record<"scope" | "deliverables", string> = {
@@ -38,11 +37,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
 
-  const { text, field_kind, model } = parsed.data;
+  const { text, field_kind } = parsed.data;
 
   try {
     const out = await complete({
-      model,
+      // Text improvement on /contracts/new is pinned to gpt-4o.
+      model: "gpt-4o",
       system: SYSTEMS[field_kind],
       user: text,
       maxTokens: 1024,

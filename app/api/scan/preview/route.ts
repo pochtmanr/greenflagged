@@ -11,9 +11,10 @@ export const maxDuration = 60;
 // strict per-IP soft rate-limit. Returns a teaser verdict; the full report
 // is gated behind sign-up.
 
-// Free preview always runs on a cheap, available model. The full /scan route
-// lets authed users pick a model from MODEL_CATALOG.
-const PREVIEW_MODEL_ID = "gpt-4o";
+// Preview runs on the same default model as the authed /scan route — see
+// lib/ai/models.ts (gpt-5.4-mini).
+import { DEFAULT_MODEL_ID } from "@/lib/ai/models";
+const PREVIEW_MODEL_ID = DEFAULT_MODEL_ID;
 
 const MAX_PREVIEW_CHARS = 30_000;
 const MAX_PREVIEW_FILE_BYTES = 5 * 1024 * 1024; // 5MB for free preview uploads

@@ -139,47 +139,19 @@ export function AppNav({ email, avatarUrl }: Props) {
               )}
             </button>
             {menuOpen ? (
-              <div
-                ref={menuRef}
-                role="menu"
-                style={{
-                  position: "absolute",
-                  top: "calc(100% + 8px)",
-                  right: 0,
-                  minWidth: 220,
-                  background: "var(--bg)",
-                  border: "1px solid var(--rule)",
-                  padding: 12,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                  boxShadow: "var(--shadow-pop)",
-                  zIndex: 50,
-                }}
-              >
+              <div ref={menuRef} role="menu" className="nav__menu">
                 {email ? (
-                  <div
-                    className="gf-mono-sm"
-                    style={{
-                      color: "var(--fg-3)",
-                      paddingBottom: 8,
-                      borderBottom: "1px solid var(--rule)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {email}
-                  </div>
+                  <div className="nav__menu-email">{email}</div>
                 ) : null}
                 <Link
                   href="/settings"
-                  className="gf-mono-sm"
+                  className="nav__menu-item"
                   onClick={() => setMenuOpen(false)}
-                  style={{ color: "var(--fg-1)" }}
+                  role="menuitem"
                 >
                   Settings
                 </Link>
-                <SignOutButton className="gf-mono-sm" />
+                <SignOutButton className="nav__menu-item nav__menu-item--danger" />
               </div>
             ) : null}
           </div>

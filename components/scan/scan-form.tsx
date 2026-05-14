@@ -2,22 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { MODEL_CATALOG } from "@/lib/ai/models";
 
 type Mode = "upload" | "paste";
-
-const MODEL_STORAGE_KEY = "gf.scan.model";
-const DEFAULT_MODEL_ID =
-  MODEL_CATALOG.find((m) => m.id === "gpt-5-mini")?.id ??
-  MODEL_CATALOG[0]?.id ??
-  "gpt-5-mini";
 type Phase =
   | { kind: "idle" }
   | { kind: "ready"; file: File }
   | { kind: "paste-ready" }
   | { kind: "parsing" }
   | { kind: "reviewing" }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string }
+  | { kind: "paywall"; paywall_url: string };
 
 const ACCEPTED = ".pdf,.docx,.txt";
 
@@ -47,13 +41,9 @@ function formatElapsed(ms: number) {
 
 function ScanProgress({
   phase,
-  modelLabel,
-  modelProvider,
   fileName,
 }: {
   phase: "parsing" | "reviewing";
-  modelLabel: string;
-  modelProvider: string;
   fileName: string;
 }) {
   const startRef = React.useRef<number>(0);
@@ -169,8 +159,8 @@ function ScanProgress({
           paddingTop: 12,
         }}
       >
-        Model: {modelLabel} · {modelProvider} · Verdict will open
-        automatically when ready.
+        Powered by ChatGPT 5.4 mini · Verdict will open automatically when
+        ready.
       </div>
     </div>
   );
@@ -182,20 +172,7 @@ export function ScanForm() {
   const [phase, setPhase] = React.useState<Phase>({ kind: "idle" });
   const [drag, setDrag] = React.useState(false);
   const [pasted, setPasted] = React.useState("");
-  const [model, setModel] = React.useState<string>(DEFAULT_MODEL_ID);
   const inputRef = React.useRef<HTMLInputElement>(null);
-
-  React.useEffect(() => {
-    const saved = window.localStorage.getItem(MODEL_STORAGE_KEY);
-    if (saved && MODEL_CATALOG.some((m) => m.id === saved)) {
-      setModel(saved);
-    }
-  }, []);
-
-  function pickModel(id: string) {
-    setModel(id);
-    window.localStorage.setItem(MODEL_STORAGE_KEY, id);
-  }
 
   const busy = phase.kind === "parsing" || phase.kind === "reviewing";
   const canSubmit =
@@ -223,7 +200,6 @@ export function ScanForm() {
       if (mode === "upload" && phase.kind === "ready") {
         const form = new FormData();
         form.append("file", phase.file);
-        form.append("model", model);
         setPhase({ kind: "parsing" });
         res = await fetch("/api/scan", { method: "POST", body: form });
       } else {
@@ -231,7 +207,7 @@ export function ScanForm() {
         res = await fetch("/api/scan", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text: pasted, model }),
+          body: JSON.stringify({ text: pasted }),
         });
       }
 
@@ -239,6 +215,16 @@ export function ScanForm() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        if (
+          res.status === 402 ||
+          (body && typeof body.error === "string" && body.error === "quota_exceeded")
+        ) {
+          const url =
+            (body && typeof body.paywall_url === "string" && body.paywall_url) ||
+            "/settings/billing";
+          setPhase({ kind: "paywall", paywall_url: url });
+          return;
+        }
         const message =
           (body && typeof body.error === "string" && body.error) ||
           `Request failed (${res.status})`;
@@ -287,11 +273,72 @@ export function ScanForm() {
       ? `${pasted.length.toLocaleString()} chars`
       : "—";
 
-  const selectedModel =
-    MODEL_CATALOG.find((m) => m.id === model) ?? MODEL_CATALOG[0];
+  // Close paywall on Escape.
+  React.useEffect(() => {
+    if (phase.kind !== "paywall") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") reset();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [phase.kind]);
 
   return (
     <div className="dropzone-wrap">
+      {phase.kind === "paywall" ? (
+        <div
+          className="paywall-overlay"
+          role="presentation"
+          onClick={reset}
+        >
+          <div
+            className="paywall-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="paywall-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="gf-label" style={{ color: "var(--accent-strong)" }}>
+              // QUOTA
+            </span>
+            <h3 id="paywall-title" className="gf-h3" style={{ margin: 0 }}>
+              Out of contracts.
+            </h3>
+            <p
+              className="gf-body-sm"
+              style={{ margin: 0, color: "var(--fg-2)" }}
+            >
+              You&apos;ve used your monthly allowance. Upgrade to Standard
+              for 10 contracts / month, or buy a single contract for $3.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                justifyContent: "flex-end",
+                flexWrap: "wrap",
+                marginTop: 8,
+              }}
+            >
+              <button
+                type="button"
+                className="gf-btn gf-btn-ghost"
+                onClick={reset}
+              >
+                Maybe later
+              </button>
+              <button
+                type="button"
+                className="gf-btn gf-btn-accent"
+                onClick={() => router.push(phase.paywall_url)}
+                autoFocus
+              >
+                Upgrade plan <span className="arrow">→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="dropzone__head">
         <span className="gf-label">// scanner · pdf · docx · txt · paste</span>
         <div style={{ display: "flex", gap: 8 }}>
@@ -336,8 +383,6 @@ export function ScanForm() {
       {busy ? (
         <ScanProgress
           phase={phase.kind as "parsing" | "reviewing"}
-          modelLabel={selectedModel?.label ?? model}
-          modelProvider={selectedModel?.provider ?? "openai"}
           fileName={fileName}
         />
       ) : mode === "upload" ? (
@@ -426,45 +471,19 @@ export function ScanForm() {
         className="dropzone__cta"
         style={{ flexWrap: "wrap", gap: 12, rowGap: 12 }}
       >
-        <label
+        <span
           className="gf-mono-sm"
           style={{
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
-            gap: 8,
+            gap: 6,
             color: "var(--fg-3)",
+            whiteSpace: "nowrap",
           }}
         >
-          <span style={{ whiteSpace: "nowrap" }}>MODEL</span>
-          <select
-            value={model}
-            onChange={(e) => pickModel(e.target.value)}
-            disabled={busy}
-            aria-label="AI model"
-            style={{
-              background: "transparent",
-              color: "var(--fg-1)",
-              border: "1px solid var(--paper-400)",
-              borderRadius: 2,
-              padding: "4px 8px",
-              fontFamily: "inherit",
-              fontSize: "inherit",
-              cursor: busy ? "wait" : "pointer",
-            }}
-          >
-            {MODEL_CATALOG.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-                {m.hint ? ` — ${m.hint}` : ""}
-              </option>
-            ))}
-          </select>
-          {selectedModel ? (
-            <span style={{ color: "var(--fg-4)" }}>
-              · {selectedModel.provider}
-            </span>
-          ) : null}
-        </label>
+          <span aria-hidden style={{ color: "var(--green-500)" }}>◆</span>
+          Powered by ChatGPT 5.4 mini
+        </span>
         <button
           type="button"
           className="gf-btn"

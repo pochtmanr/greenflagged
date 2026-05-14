@@ -676,8 +676,93 @@ button { font-family: inherit; }
 .nav__actions { display: flex; gap: 16px; align-items: center; }
 .nav__cta { padding: 9px 16px; font-size: 11px; }
 
+/* Paywall modal (quota_exceeded) */
+.paywall-overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, var(--bg) 70%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.paywall-card {
+  position: relative;
+  max-width: 460px;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: var(--shadow-pop);
+}
+
 /* Account avatar + dropdown anchor */
 .nav__avatar-wrap { position: relative; display: inline-flex; align-items: center; }
+
+/* Account dropdown menu (desktop) */
+.nav__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: var(--shadow-pop);
+  z-index: 50;
+}
+.nav__menu-email {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: var(--fg-3);
+  padding: 8px 10px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--rule);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav__menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--fg-1);
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 10px 12px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+.nav__menu-item:hover,
+.nav__menu-item:focus-visible {
+  background: var(--paper-100);
+  color: var(--accent-strong);
+  border-color: var(--rule);
+  outline: none;
+}
+.nav__menu-item--danger { color: var(--sev-red) !important; }
+.nav__menu-item--danger:hover,
+.nav__menu-item--danger:focus-visible {
+  background: color-mix(in oklch, var(--sev-red) 8%, var(--surface));
+  color: var(--sev-red) !important;
+  border-color: color-mix(in oklch, var(--sev-red) 30%, var(--rule));
+}
+.nav__menu-item:disabled { opacity: .55; cursor: wait; }
 
 .nav__mobile-toggle {
   display: none;
