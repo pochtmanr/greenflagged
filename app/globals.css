@@ -2114,3 +2114,50 @@ button { font-family: inherit; }
     transition: none;
   }
 }
+
+/* =====================================================================
+   Tabs — Card / Crypto switcher for /settings/billing PAYG.
+   No backdrop-blur per design rules. Solid surface, hairline rule.
+===================================================================== */
+.gf-tabs {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  padding: 2px;
+  align-self: flex-start;
+}
+.gf-tabs [role="tab"] {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--fg-3);
+  border: 0;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.gf-tabs [role="tab"][data-state="active"] {
+  background: var(--ink-500);
+  color: var(--paper-50);
+}
+.gf-tabs [role="tab"]:disabled,
+.gf-tabs [role="tab"][data-disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.gf-tabs [role="tab"]:hover:not([data-state="active"]):not(:disabled) {
+  color: var(--fg-1);
+}
+.gf-fineprint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--fg-3);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
