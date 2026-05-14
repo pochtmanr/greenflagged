@@ -1940,9 +1940,9 @@ button { font-family: inherit; }
 .art-interlude {
   position: relative;
   width: 100%;
-  aspect-ratio: 2944 / 1648;
-  max-height: 640px;
-  min-height: 320px;
+  aspect-ratio: 2944 / 1072;
+  max-height: 460px;
+  min-height: 260px;
   display: flex;
   align-items: stretch;
   overflow: hidden;
@@ -1951,8 +1951,9 @@ button { font-family: inherit; }
 }
 .art-interlude__image {
   position: absolute;
-  inset: 0;
+  inset: -80px 0;
   z-index: 0;
+  will-change: transform;
 }
 .art-interlude__image img {
   object-fit: cover;
@@ -1980,7 +1981,7 @@ button { font-family: inherit; }
 .art-interlude__inner {
   display: flex;
   align-items: center;
-  max-width: 1180px;
+  justify-content: flex-start;
 }
 .art-interlude__panel {
   display: flex;
@@ -2007,7 +2008,7 @@ button { font-family: inherit; }
   margin: 0;
 }
 @media (max-width: 720px) {
-  .art-interlude__panel { padding: 18px 20px; gap: 10px; }
+  .art-interlude__panel { padding: 18px 20px; margin-left: -20px; gap: 10px; }
   .art-interlude__inner { padding-left: 16px; padding-right: 16px; }
 }
 

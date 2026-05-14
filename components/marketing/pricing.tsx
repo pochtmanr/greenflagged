@@ -82,8 +82,7 @@ export function Pricing({ signedIn = false }: Props = {}) {
   const [yearly, setYearly] = React.useState(false);
 
   return (
-    <section id="pricing" className="section section--dotted">
-      <div className="hero__bg" aria-hidden />
+    <section id="pricing" className="section">
       <div className="container" style={{ position: "relative" }}>
         <SectionHeading
           eyebrow="// 04  Pricing"

@@ -69,6 +69,6 @@ export const LANDING_ART: Record<LandingArtKey, LandingArt> = {
     src: "/landing/art/art-intermission.avif",
     alt: "Suited figure facing a deep blue inlet ringed by rain-veiled buildings",
     width: 2944,
-    height: 1648,
+    height: 1072,
   },
 };

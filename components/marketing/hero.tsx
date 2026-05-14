@@ -4,7 +4,6 @@ import { HeroAnalyzer } from "@/components/marketing/hero-analyzer";
 export function Hero() {
   return (
     <section className="hero hero--centerpiece">
-      <div className="hero__bg" aria-hidden />
       <div className="container hero__stack">
         <header className="hero__head">
           <span className="gf-tag hero__eyebrow">
