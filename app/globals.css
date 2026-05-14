@@ -1020,8 +1020,40 @@ button { font-family: inherit; }
 .pricing__period { font-family: var(--font-mono); font-size: 12px; color: var(--fg-3); }
 .pricing__feats { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
 .pricing__feats li { display: flex; gap: 10px; font-size: 14px; line-height: 1.45; color: var(--fg-2); }
-.pricing__check { color: var(--green-500); font-family: var(--font-mono); }
+.pricing__feats li.is-muted { opacity: 0.5; }
+.pricing__check { color: var(--green-500); font-family: var(--font-mono); flex-shrink: 0; min-width: 14px; }
+.pricing__check[data-state="off"] { color: var(--fg-4); }
+.pricing__soon { font-style: normal; font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); letter-spacing: .08em; }
 .pricing__card .gf-btn { margin-top: auto; align-self: flex-start; }
+
+/* === Billing — usage grid + PAYG stepper === */
+.billing-usage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 720px) { .billing-usage { grid-template-columns: 1fr; } }
+.billing-usage > div { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--rule); background: var(--surface); }
+.billing-usage strong { font-family: var(--font-sans); font-size: 22px; font-weight: 700; letter-spacing: -.02em; color: var(--fg-1); }
+.billing-usage small { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); }
+
+.payg-stepper { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.payg-stepper__btn {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  padding: 8px 14px; border: 1px solid var(--rule); background: var(--surface);
+  color: var(--fg-2); cursor: pointer; transition: background 120ms, color 120ms, border-color 120ms;
+}
+.payg-stepper__btn:hover { border-color: var(--rule-strong); color: var(--fg-1); }
+.payg-stepper__btn.is-on { background: var(--ink-500); color: var(--paper-50); border-color: var(--ink-500); }
+:root[data-theme="dark"] .payg-stepper__btn.is-on { background: var(--rule-strong); color: var(--fg-inv); border-color: var(--rule-strong); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .payg-stepper__btn.is-on { background: var(--rule-strong); color: var(--fg-inv); border-color: var(--rule-strong); }
+}
+
+/* Tier highlight when /settings/billing?plan=X targets a card */
+.billing-tier { transition: box-shadow 200ms, border-color 200ms; }
+.billing-tier.is-target { box-shadow: 0 0 0 2px var(--green-500); border-color: var(--green-500); }
+
+/* Payment-history kind chips — distinct from severity */
+.gf-tag.kind--overage { color: var(--fg-1); border-color: var(--rule-strong); background: var(--surface-elev); }
+.gf-tag.kind--subscription { color: var(--accent-strong); border-color: var(--accent-strong); background: transparent; }
+.gf-tag.kind--payg { color: var(--fg-2); border-color: var(--rule); background: var(--surface); }
 
 /* === FAQ === */
 .faq { border-top: 1px solid var(--rule); }

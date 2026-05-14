@@ -3,12 +3,24 @@
 import * as React from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 
-type Props = { kind: "payg"; quantity?: number };
+type Props = {
+  kind: "payg";
+  quantity?: number;
+  /** Render a [1] [5] [10] [20] selector above the tabs. */
+  showStepper?: boolean;
+};
 
 type Method = "card" | "crypto";
 
-export function BillingActions({ kind, quantity = 1 }: Props) {
+const STEPPER_OPTIONS = [1, 5, 10, 20] as const;
+
+export function BillingActions({
+  kind,
+  quantity: initialQuantity = 1,
+  showStepper = false,
+}: Props) {
   const [method, setMethod] = React.useState<Method>("card");
+  const [quantity, setQuantity] = React.useState<number>(initialQuantity);
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -70,6 +82,29 @@ export function BillingActions({ kind, quantity = 1 }: Props) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {showStepper ? (
+        <div
+          className="payg-stepper"
+          role="radiogroup"
+          aria-label="Number of contract credits"
+        >
+          {STEPPER_OPTIONS.map((n) => (
+            <button
+              key={n}
+              type="button"
+              role="radio"
+              aria-checked={quantity === n}
+              className={
+                "payg-stepper__btn" + (quantity === n ? " is-on" : "")
+              }
+              onClick={() => setQuantity(n)}
+              disabled={pending}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <Tabs.Root
         value={method}
         onValueChange={(v) => setMethod(v as Method)}

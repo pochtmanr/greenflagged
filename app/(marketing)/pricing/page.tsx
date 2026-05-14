@@ -4,9 +4,45 @@ import { FAQ } from "@/components/marketing/faq";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Pricing",
+  title: "Pricing — Green Flagged",
   description:
-    "Pay €9 once or subscribe for unlimited contract reviews from €15/month. Cancel any time.",
+    "Free, Pay as you go ($3 per contract), or Standard ($25/month, 10 contracts). No yearly lock-in, no surprises.",
+};
+
+const PRICING_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: "Green Flagged",
+  description:
+    "AI contract review and drafting. Free, Pay as you go, or Standard tier.",
+  brand: { "@type": "Brand", name: "Green Flagged" },
+  offers: [
+    {
+      "@type": "Offer",
+      name: "Free",
+      price: "0.00",
+      priceCurrency: "USD",
+      description: "1 contract per month.",
+      availability: "https://schema.org/InStock",
+    },
+    {
+      "@type": "Offer",
+      name: "Pay as you go",
+      price: "3.00",
+      priceCurrency: "USD",
+      description: "Per contract, no commitment, valid 90 days.",
+      availability: "https://schema.org/InStock",
+    },
+    {
+      "@type": "Offer",
+      name: "Standard",
+      price: "25.00",
+      priceCurrency: "USD",
+      description:
+        "10 contracts per month, each extra at $3.00. Monthly billing.",
+      availability: "https://schema.org/InStock",
+    },
+  ],
 };
 
 export default async function PricingPage() {
@@ -17,18 +53,22 @@ export default async function PricingPage() {
   const signedIn = Boolean(user);
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(PRICING_JSONLD) }}
+      />
       <section className="section" style={{ paddingTop: 144 }}>
         <div className="container">
           <div style={{ maxWidth: 760, marginBottom: 56 }}>
             <span className="gf-label">// PRICING</span>
             <h1 className="gf-h1" style={{ marginTop: 14 }}>
-              One coffee.
-              <br />
-              <span style={{ color: "var(--green-500)" }}>Two hundred saved.</span>
+              Simple,{" "}
+              <span style={{ color: "var(--green-500)" }}>contract-based</span>{" "}
+              pricing.
             </h1>
             <p className="gf-body" style={{ marginTop: 24, fontSize: 17 }}>
-              Start with one scan. Subscribe when you sign contracts often.
-              Cancel any time. Annual plans get two months free.
+              Pay for what you scan or draft. Standard is best for ongoing work
+              — Pay as you go is best for one-offs. No yearly lock-in.
             </p>
           </div>
         </div>
@@ -42,8 +82,8 @@ export default async function PricingPage() {
             className="gf-mono-sm"
             style={{ textAlign: "center", color: "var(--fg-3)" }}
           >
-            Prices shown in EUR. VAT applied at checkout for EU customers. We
-            offer a 14-day full refund on annual plans.
+            Prices shown in USD. Standard auto-bills $3 per contract over the
+            monthly cap. Cancel any time.
           </p>
         </div>
       </section>

@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSupabaseServer } from "@/lib/supabase/server";
-import type { PlanId, PaymentStatus } from "@/lib/supabase/types";
+import type { PlanId, PaymentStatus, PaymentKind } from "@/lib/supabase/types";
 import { PAYG, PLANS } from "@/lib/billing/plans";
 import { getQuota } from "@/lib/billing/quota";
 import { BillingActions } from "@/components/settings/billing-actions";
 import { BillingCheckoutClient } from "@/components/settings/billing-checkout";
+import { BillingTierScroll } from "@/components/settings/billing-tier-scroll";
 import { CancelSubscription } from "@/components/settings/cancel-subscription";
 import { SettingsNav } from "@/components/settings/settings-nav";
 
@@ -16,12 +17,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// NOTE: This page is a thin compile-time shim updated in phase 11 so the
-// pricing-v2 foundation lands without a broken /settings/billing route.
-// Prompt 14 owns the proper redesign (cards, copy, overage UI).
-
 function fmtUsd(cents: number): string {
   return `$${(cents / 100).toFixed(0)}`;
+}
+
+function fmtUsd2(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
 }
 
 function fmtDate(iso: string | null): string {
@@ -45,7 +46,6 @@ function statusSeverity(status: PaymentStatus): "green" | "yellow" | "red" {
     case "succeeded":
       return "green";
     case "pending":
-      return "yellow";
     case "refunded":
       return "yellow";
     case "failed":
@@ -66,24 +66,98 @@ function statusLabel(status: PaymentStatus): string {
   }
 }
 
+function kindChip(kind: PaymentKind): { label: string; cls: string } {
+  switch (kind) {
+    case "overage":
+      return { label: "OVERAGE", cls: "kind--overage" };
+    case "one_off":
+      return { label: "PAYG", cls: "kind--payg" };
+    case "subscription_initial":
+      return { label: "SUBSCRIPTION", cls: "kind--subscription" };
+    case "subscription_renewal":
+      return { label: "RENEWAL", cls: "kind--subscription" };
+  }
+}
+
+function startOfMonthIso(): string {
+  const d = new Date();
+  d.setUTCDate(1);
+  d.setUTCHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+type PlanCardData = {
+  id: "free" | "payg" | "standard";
+  label: string;
+  blurb: string;
+  priceLabel: string;
+  priceSuffix: string;
+  features: string[];
+};
+
+const PLAN_CARDS: PlanCardData[] = [
+  {
+    id: "free",
+    label: "Free",
+    blurb: "Test one contract.",
+    priceLabel: "$0",
+    priceSuffix: "USD",
+    features: [
+      "1 contract per month",
+      "Full clause report",
+      "Clause rewrite suggestions",
+    ],
+  },
+  {
+    id: "payg",
+    label: "Pay as you go",
+    blurb: "No commitment, not recurring.",
+    priceLabel: "$3",
+    priceSuffix: "per contract",
+    features: [
+      "Buy credits in 1 / 5 / 10 / 20 packs",
+      "Card or crypto checkout",
+      `Valid ${PAYG.ttl_days} days`,
+    ],
+  },
+  {
+    id: "standard",
+    label: "Standard",
+    blurb: "Best for solo adventures.",
+    priceLabel: "$25",
+    priceSuffix: "per month",
+    features: [
+      "10 contracts per month",
+      "Each extra: $3.00 auto-billed",
+      "Faster analysis queue",
+      "Filter by clause type · Audit log",
+    ],
+  },
+];
+
 function PlanCard({
-  planId,
+  card,
   active,
   highlighted,
+  targeted,
+  currentPlanId,
 }: {
-  planId: PlanId;
+  card: PlanCardData;
   active: boolean;
   highlighted?: boolean;
+  targeted?: boolean;
+  currentPlanId: PlanId;
 }) {
-  const plan = PLANS[planId];
   return (
     <div
-      className="gf-card"
+      className={"gf-card billing-tier" + (targeted ? " is-target" : "")}
+      data-tier={card.id}
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: 16,
+        gap: 14,
         borderColor: highlighted ? "var(--accent)" : undefined,
+        scrollMarginTop: 120,
       }}
     >
       <div
@@ -94,44 +168,114 @@ function PlanCard({
           gap: 12,
         }}
       >
-        <span className="gf-label">// {plan.id.toUpperCase()}</span>
+        <span className="gf-label">// {card.id.toUpperCase()}</span>
         {active ? <span className="gf-tag sev-green">CURRENT</span> : null}
       </div>
       <h3 className="gf-h3" style={{ margin: 0 }}>
-        {plan.label}
+        {card.label}
       </h3>
+      <p
+        className="gf-body-sm"
+        style={{ marginTop: 0, color: "var(--fg-2)" }}
+      >
+        {card.blurb}
+      </p>
       <div className="gf-mono" style={{ fontSize: 28, color: "var(--fg-1)" }}>
-        {fmtUsd(plan.price_cents)}
+        {card.priceLabel}
         <span
           className="gf-mono-sm"
           style={{ color: "var(--fg-3)", marginLeft: 8 }}
         >
-          / mo
+          {card.priceSuffix}
         </span>
       </div>
-      <div className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
-        {plan.contracts} contract{plan.contracts === 1 ? "" : "s"} / month
-        {plan.overage_price_cents
-          ? ` · then ${fmtUsd(plan.overage_price_cents)} each`
-          : ""}
+      <ul
+        style={{
+          listStyle: "none",
+          padding: 0,
+          margin: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
+        {card.features.map((f) => (
+          <li
+            key={f}
+            style={{
+              display: "flex",
+              gap: 10,
+              fontSize: 14,
+              color: "var(--fg-2)",
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                color: "var(--green-500)",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              ✓
+            </span>
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
+      <div style={{ marginTop: "auto", paddingTop: 8 }}>
+        {card.id === "free" ? (
+          <p
+            className="gf-mono-sm"
+            style={{ color: "var(--fg-3)", margin: 0 }}
+          >
+            {currentPlanId === "free"
+              ? "1 contract per month. No card required."
+              : "Always available as a fallback."}
+          </p>
+        ) : card.id === "payg" ? (
+          <Link href="#payg-buy" className="gf-btn gf-btn-ghost">
+            Buy contracts <span className="arrow">→</span>
+          </Link>
+        ) : (
+          <BillingCheckoutClient
+            active={active}
+            planId="standard"
+            planLabel="Standard"
+          />
+        )}
       </div>
-      <BillingCheckoutClient
-        active={active}
-        planId={plan.id}
-        planLabel={plan.label}
-      />
     </div>
   );
 }
 
-export default async function BillingPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams?: SearchParams;
+}) {
   const supabase = await getSupabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
 
-  const [{ data: sub }, { data: payments }, quota] = await Promise.all([
+  const sp = (await searchParams) ?? {};
+  const rawPlan = Array.isArray(sp.plan) ? sp.plan[0] : sp.plan;
+  const targetPlan: PlanCardData["id"] | null =
+    rawPlan === "free" || rawPlan === "payg" || rawPlan === "standard"
+      ? rawPlan
+      : null;
+
+  const monthStart = startOfMonthIso();
+
+  const [
+    { data: sub },
+    { data: payments },
+    { count: overageCount },
+    quota,
+  ] = await Promise.all([
     supabase
       .from("subscriptions")
       .select(
@@ -145,21 +289,32 @@ export default async function BillingPage() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(20),
+    supabase
+      .from("payments")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("kind", "overage")
+      .eq("status", "succeeded")
+      .gte("created_at", monthStart),
     getQuota(user.id),
   ]);
 
   const planId = (sub?.plan as PlanId | null) ?? "free";
-  const planLabel = PLANS[planId]?.label ?? "Free";
+  const isPaidStatus = sub?.status === "active" || sub?.status === "trialing";
+  const effectivePlanId: PlanId = isPaidStatus ? planId : "free";
+  const planLabel = PLANS[effectivePlanId]?.label ?? "Free";
   const status = sub?.status ?? "active";
   const cancelAtPeriodEnd = sub?.cancel_at_period_end ?? false;
   const periodEnd = sub?.current_period_end ?? null;
-
-  const isPaid = planId !== "free";
+  const isPaid = effectivePlanId !== "free";
+  const isStandard = effectivePlanId === "standard";
+  const overageThisMonth = overageCount ?? 0;
 
   return (
     <section className="section" style={{ paddingTop: 64 }}>
       <div className="app-shell">
         <SettingsNav current="billing" />
+        {targetPlan ? <BillingTierScroll target={targetPlan} /> : null}
         <div
           style={{
             display: "flex",
@@ -250,48 +405,68 @@ export default async function BillingPage() {
             ) : null}
           </div>
 
-          {/* Usage this month */}
-          <div
+          {/* This month */}
+          <section
             className="gf-card"
             style={{ display: "flex", flexDirection: "column", gap: 16 }}
           >
             <h2 className="gf-h4" style={{ margin: 0 }}>
-              Usage this month
+              This month
             </h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div className="gf-specrow">
-                <span className="key">Contracts</span>
-                <span className="dots" aria-hidden />
-                <span className="val">
+            <div className="billing-usage">
+              <div>
+                <span className="gf-label">Contracts</span>
+                <strong>
                   {quota.contracts.unlimited
-                    ? `${quota.contracts.used} · Unlimited`
+                    ? `${quota.contracts.used} · ∞`
                     : `${quota.contracts.used} / ${quota.contracts.limit}`}
-                </span>
+                </strong>
+                {quota.contracts.remaining === 0 &&
+                !quota.contracts.unlimited &&
+                quota.credits.contracts === 0 &&
+                !isStandard ? (
+                  <small style={{ color: "var(--sev-orange)" }}>
+                    Out of contracts — buy more below.
+                  </small>
+                ) : null}
               </div>
-              {quota.credits.contracts > 0 ? (
-                <div className="gf-specrow">
-                  <span className="key">Credits</span>
-                  <span className="dots" aria-hidden />
-                  <span className="val">
-                    +{quota.credits.contracts} contract
-                    {quota.credits.contracts === 1 ? "" : "s"}
-                    {quota.credits.earliest_expires_at
-                      ? ` · expires ${fmtDate(quota.credits.earliest_expires_at)}`
-                      : ""}
-                  </span>
+              <div>
+                <span className="gf-label">Credits</span>
+                <strong>{quota.credits.contracts}</strong>
+                {quota.credits.earliest_expires_at ? (
+                  <small>
+                    earliest expires{" "}
+                    {fmtDate(quota.credits.earliest_expires_at)}
+                  </small>
+                ) : (
+                  <small>—</small>
+                )}
+              </div>
+              {isStandard ? (
+                <div>
+                  <span className="gf-label">Overages this month</span>
+                  <strong>{overageThisMonth}× $3.00</strong>
+                  <small>auto-billed via card on file</small>
                 </div>
-              ) : null}
-              {quota.overage ? (
-                <p
-                  className="gf-mono-sm"
-                  style={{ color: "var(--sev-orange)", margin: 0 }}
-                >
-                  You&apos;ve used your included allowance. Additional contracts
-                  this month will be auto-billed at {fmtUsd(PLANS.standard.overage_price_cents ?? 300)} each.
-                </p>
-              ) : null}
+              ) : (
+                <div>
+                  <span className="gf-label">Plan cap</span>
+                  <strong>{PLANS[effectivePlanId].contracts}</strong>
+                  <small>per calendar month</small>
+                </div>
+              )}
             </div>
-          </div>
+            {quota.overage ? (
+              <p
+                className="gf-mono-sm"
+                style={{ color: "var(--sev-orange)", margin: 0 }}
+              >
+                You&apos;ve used your included allowance. Additional contracts
+                this month auto-bill at{" "}
+                {fmtUsd(PLANS.standard.overage_price_cents ?? 300)} each.
+              </p>
+            ) : null}
+          </section>
 
           {/* Plans grid */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -301,39 +476,58 @@ export default async function BillingPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
                 gap: 16,
               }}
               className="billing__plans"
             >
-              <PlanCard planId="free" active={planId === "free"} />
               <PlanCard
-                planId="standard"
-                active={planId === "standard"}
+                card={PLAN_CARDS[0]}
+                active={effectivePlanId === "free"}
+                targeted={targetPlan === "free"}
+                currentPlanId={effectivePlanId}
+              />
+              <PlanCard
+                card={PLAN_CARDS[1]}
+                active={false}
+                targeted={targetPlan === "payg"}
+                currentPlanId={effectivePlanId}
+              />
+              <PlanCard
+                card={PLAN_CARDS[2]}
+                active={effectivePlanId === "standard"}
                 highlighted
+                targeted={targetPlan === "standard"}
+                currentPlanId={effectivePlanId}
               />
             </div>
           </div>
 
-          {/* PAYG banner */}
+          {/* PAYG buy block */}
           <div
+            id="payg-buy"
             className="gf-frame"
-            style={{ display: "flex", flexDirection: "column", gap: 12 }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              scrollMarginTop: 120,
+            }}
           >
             <span className="gf-frame-bl" aria-hidden />
             <span className="gf-frame-br" aria-hidden />
             <span className="gf-label">// PAY-AS-YOU-GO</span>
             <h3 className="gf-h3" style={{ margin: 0 }}>
-              Just need one contract?
+              Buy contract credits.
             </h3>
             <p
               className="gf-body-sm"
               style={{ color: "var(--fg-2)", margin: 0 }}
             >
-              Buy a single contract credit for {fmtUsd(PAYG.price_cents)}.
-              Valid for {PAYG.ttl_days} days. No subscription required.
+              {fmtUsd2(PAYG.price_cents)} per credit. Valid {PAYG.ttl_days}{" "}
+              days. Pay with card or crypto. No subscription.
             </p>
-            <BillingActions kind="payg" />
+            <BillingActions kind="payg" showStepper />
           </div>
 
           {/* Payment history */}
@@ -355,30 +549,44 @@ export default async function BillingPage() {
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 8 }}
               >
-                {(payments ?? []).map((p) => (
-                  <div key={p.id} className="gf-specrow">
-                    <span className="key">
-                      {fmtDate(p.created_at)} ·{" "}
-                      {p.kind === "one_off"
-                        ? "PAYG credit"
-                        : p.kind === "overage"
-                          ? "Overage"
-                          : p.kind === "subscription_initial"
-                            ? `${p.plan ?? ""} (initial)`
-                            : `${p.plan ?? ""} (renewal)`}
-                    </span>
-                    <span className="dots" aria-hidden />
-                    <span className="val">
-                      {fmtAmount(p.amount_cents, p.currency)}{" "}
+                {(payments ?? []).map((p) => {
+                  const chip = kindChip(p.kind as PaymentKind);
+                  return (
+                    <div key={p.id} className="gf-specrow">
                       <span
-                        className={`gf-tag sev-${statusSeverity(p.status as PaymentStatus)}`}
-                        style={{ marginLeft: 8 }}
+                        className="key"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 8,
+                          flexWrap: "wrap",
+                        }}
                       >
-                        {statusLabel(p.status as PaymentStatus)}
+                        {fmtDate(p.created_at)}
+                        <span className={`gf-tag ${chip.cls}`}>
+                          {chip.label}
+                        </span>
+                        {p.plan &&
+                        p.kind !== "overage" &&
+                        p.kind !== "one_off" ? (
+                          <span style={{ color: "var(--fg-3)" }}>
+                            {p.plan}
+                          </span>
+                        ) : null}
                       </span>
-                    </span>
-                  </div>
-                ))}
+                      <span className="dots" aria-hidden />
+                      <span className="val">
+                        {fmtAmount(p.amount_cents, p.currency)}{" "}
+                        <span
+                          className={`gf-tag sev-${statusSeverity(p.status as PaymentStatus)}`}
+                          style={{ marginLeft: 8 }}
+                        >
+                          {statusLabel(p.status as PaymentStatus)}
+                        </span>
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

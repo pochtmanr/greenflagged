@@ -1,156 +1,140 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { Reveal } from "@/components/marketing/reveal";
 
+type Feature = { label: string; included: boolean; comingSoon?: boolean };
+
 type Tier = {
-  id: string;
+  id: "free" | "payg" | "standard";
   name: string;
   blurb: string;
-  m: { a: number; p: string };
-  y: { a: number; p: string };
+  price: { amount: number; suffix: string };
   cta: string;
   hot?: boolean;
-  feats: string[];
+  features: Feature[];
 };
 
 type Props = { signedIn?: boolean };
 
-// Map tier id + yearly toggle to the canonical PlanId expected by
-// /api/billing/checkout. one-off and the free tier don't have a yearly form.
-function planSlugFor(tierId: string, yearly: boolean): string {
-  if (tierId === "payg") return "one_off";
-  if (tierId === "freelancer")
-    return yearly ? "freelancer_yearly" : "freelancer_monthly";
-  if (tierId === "pro") return yearly ? "pro_yearly" : "pro_monthly";
-  return tierId;
-}
-
 const TIERS: Tier[] = [
   {
+    id: "free",
+    name: "Free",
+    blurb: "Test one contract.",
+    price: { amount: 0, suffix: "USD" },
+    cta: "Start free",
+    features: [
+      { label: "Contracts per month: 1", included: true },
+      { label: "Save contracts and results", included: true },
+      { label: "Full clause report", included: true },
+      { label: "Clause rewrite suggestions", included: true },
+      { label: "Faster analysis queue", included: false },
+      { label: "Filter by clause type", included: false },
+      { label: "Audit log", included: false },
+    ],
+  },
+  {
     id: "payg",
-    name: "Pay per contract",
-    blurb: "Test it first. Pay once, get one full verdict.",
-    m: { a: 9, p: "one-off" },
-    y: { a: 9, p: "one-off" },
-    cta: "Buy one scan",
-    feats: [
-      "1 full contract analysis",
-      "Plain-language explanations",
-      "Suggested redline edits",
-      "PDF export of the report",
-      "Auto-delete after 30 days",
+    name: "Pay as you go",
+    blurb: "No commitment, not recurring.",
+    price: { amount: 3, suffix: "per contract" },
+    cta: "Buy a contract",
+    features: [
+      { label: "Contracts per month: 0", included: true },
+      { label: "Each extra contract: $3.00", included: true },
+      { label: "Save contracts and results", included: true },
+      { label: "Full clause report", included: true },
+      { label: "Clause rewrite suggestions", included: true },
+      { label: "Card or crypto checkout", included: true },
+      { label: "Faster analysis queue", included: false },
     ],
   },
   {
-    id: "freelancer",
-    name: "Freelancer",
-    blurb: "For active freelancers signing contracts regularly.",
-    m: { a: 15, p: "/ month" },
-    y: { a: 150, p: "/ year" },
-    cta: "Start with Freelancer",
+    id: "standard",
+    name: "Standard",
+    blurb: "Best for solo adventures.",
+    price: { amount: 25, suffix: "per month" },
+    cta: "Start with Standard",
     hot: true,
-    feats: [
-      "Unlimited contract analyses",
-      "History of past reviews",
-      "Side-by-side contract comparison",
-      "Custom retention (30 / 60 / 90 days)",
-      "Email support",
-    ],
-  },
-  {
-    id: "pro",
-    name: "Pro / Agency",
-    blurb: "Teams reviewing contracts at scale.",
-    m: { a: 39, p: "/ month" },
-    y: { a: 390, p: "/ year" },
-    cta: "Start with Pro",
-    feats: [
-      "Everything in Freelancer",
-      "3 team seats included",
-      "Custom risk profiles per user",
-      "Priority AI processing",
-      "Contract templates library",
-      "Limited API access",
+    features: [
+      { label: "Contracts per month: 10", included: true },
+      { label: "Each extra contract: $3.00", included: true },
+      { label: "Save contracts and results", included: true },
+      { label: "Full clause report", included: true },
+      { label: "Faster analysis queue", included: true },
+      { label: "Clause rewrite suggestions", included: true },
+      { label: "Filter by clause type", included: true },
+      { label: "Audit log", included: true },
+      { label: "Team access", included: false, comingSoon: true },
     ],
   },
 ];
 
-export function Pricing({ signedIn = false }: Props = {}) {
-  const [yearly, setYearly] = React.useState(false);
+function ctaHref(tier: Tier, signedIn: boolean): string {
+  if (signedIn) return `/settings/billing?plan=${tier.id}`;
+  return `/sign-up?intent=upgrade&plan=${tier.id}`;
+}
 
+export function Pricing({ signedIn = false }: Props = {}) {
   return (
     <section id="pricing" className="section">
       <div className="container" style={{ position: "relative" }}>
         <SectionHeading
           eyebrow="// 04  Pricing"
-          lead="One scan, or unlimited. Your call."
+          lead="Free, Pay as you go, or Standard. USD, monthly, no yearly lock-in."
         />
-        <div className="pricing__toggle" role="tablist" aria-label="Billing period">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={!yearly}
-            onClick={() => setYearly(false)}
-            className={"pricing__pill " + (!yearly ? "is-on" : "")}
-          >
-            Monthly
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={yearly}
-            onClick={() => setYearly(true)}
-            className={"pricing__pill " + (yearly ? "is-on" : "")}
-          >
-            Yearly <span className="pricing__save">2 mo free</span>
-          </button>
-        </div>
         <div className="pricing__grid">
-          {TIERS.map((t, i) => {
-            const b = yearly ? t.y : t.m;
-            return (
-              <Reveal
-                key={t.id}
-                as="div"
-                className={"pricing__card " + (t.hot ? "is-hot" : "")}
-                delayMs={i * 80}
+          {TIERS.map((t, i) => (
+            <Reveal
+              key={t.id}
+              as="div"
+              className={"pricing__card " + (t.hot ? "is-hot" : "")}
+              delayMs={i * 80}
+            >
+              {t.hot ? <span className="pricing__hot">MOST POPULAR</span> : null}
+              <span className="gf-label">// {t.id.toUpperCase()}</span>
+              <h3 className="gf-h3" style={{ margin: "8px 0 6px" }}>
+                {t.name}
+              </h3>
+              <p className="gf-body-sm" style={{ marginTop: 0 }}>
+                {t.blurb}
+              </p>
+              <div className="pricing__price">
+                <span className="pricing__amount">${t.price.amount}</span>
+                <span className="pricing__period">{t.price.suffix}</span>
+              </div>
+              <ul className="pricing__feats">
+                {t.features.map((f) => (
+                  <li
+                    key={f.label}
+                    className={f.included ? "" : "is-muted"}
+                  >
+                    <span
+                      className="pricing__check"
+                      aria-hidden
+                      data-state={f.included ? "on" : "off"}
+                    >
+                      {f.included ? "✓" : "—"}
+                    </span>
+                    <span>
+                      {f.label}
+                      {f.comingSoon ? (
+                        <em className="pricing__soon"> · coming soon</em>
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href={ctaHref(t, signedIn)}
+                className={"gf-btn " + (t.hot ? "" : "gf-btn-ghost")}
               >
-                {t.hot ? <span className="pricing__hot">MOST POPULAR</span> : null}
-                <span className="gf-label">// {t.id.toUpperCase()}</span>
-                <h3 className="gf-h3" style={{ margin: "8px 0 6px" }}>
-                  {t.name}
-                </h3>
-                <p className="gf-body-sm" style={{ marginTop: 0 }}>
-                  {t.blurb}
-                </p>
-                <div className="pricing__price">
-                  <span className="pricing__amount">€{b.a}</span>
-                  <span className="pricing__period">{b.p}</span>
-                </div>
-                <ul className="pricing__feats">
-                  {t.feats.map((f) => (
-                    <li key={f}>
-                      <span className="pricing__check">✓</span>
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={
-                    signedIn
-                      ? "/settings/billing"
-                      : `/sign-up?intent=upgrade&plan=${planSlugFor(t.id, yearly)}`
-                  }
-                  className={"gf-btn " + (t.hot ? "" : "gf-btn-ghost")}
-                >
-                  {t.cta} <span className="arrow">→</span>
-                </Link>
-              </Reveal>
-            );
-          })}
+                {t.cta} <span className="arrow">→</span>
+              </Link>
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>

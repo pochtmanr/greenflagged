@@ -5,6 +5,7 @@ import { QuickActions } from "@/components/dashboard/quick-actions";
 import { UsageMeter } from "@/components/dashboard/usage-meter";
 import { ContractsList } from "@/components/dashboard/contracts-list";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
+import { PendingUpgradeRedirect } from "@/components/dashboard/pending-upgrade-redirect";
 import { PLANS } from "@/lib/billing/plans";
 import type { PlanId } from "@/lib/supabase/types";
 
@@ -86,6 +87,7 @@ export default async function DashboardPage() {
 
   return (
     <section className="section" style={{ paddingTop: 64 }}>
+      <PendingUpgradeRedirect />
       <div className="app-shell">
         <div style={{ display: "flex", flexDirection: "column", gap: 48 }}>
           <header style={{ display: "flex", flexDirection: "column", gap: 12 }}>

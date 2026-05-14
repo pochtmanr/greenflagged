@@ -16,6 +16,8 @@ type Props = {
   defaultMode?: Mode;
 };
 
+const VALID_INTENT_PLANS = new Set(["free", "payg", "standard"]);
+
 export function SignInForm({ defaultMode = "sign-in" }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,6 +28,21 @@ export function SignInForm({ defaultMode = "sign-in" }: Props) {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+
+  // Persist ?intent=upgrade&plan=X to sessionStorage so the post-onboarding
+  // dashboard step can redirect to /settings/billing?plan=X.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const intent = searchParams?.get("intent");
+    const plan = searchParams?.get("plan");
+    if (intent !== "upgrade" || !plan || !VALID_INTENT_PLANS.has(plan)) return;
+    try {
+      window.sessionStorage.setItem("gf_pending_upgrade", plan);
+    } catch {
+      // Storage unavailable (private mode, quota). Fail silently — the user
+      // will land on /dashboard instead of /settings/billing.
+    }
+  }, [searchParams]);
 
   const isSignUp = mode === "sign-up";
 
