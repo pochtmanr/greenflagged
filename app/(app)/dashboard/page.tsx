@@ -97,14 +97,7 @@ export default async function DashboardPage() {
 
           <QuickActions />
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 24,
-            }}
-            className="dashboard__grid"
-          >
+          <div className="dashboard__grid">
             <UsageMeter
               contracts={contractCount}
               contractLimit={plan.contracts}

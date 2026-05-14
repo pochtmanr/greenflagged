@@ -94,7 +94,7 @@ export function AppNav({ email, avatarUrl }: Props) {
         </nav>
         <div className="nav__actions">
           <ThemeToggle />
-          <div style={{ position: "relative" }}>
+          <div className="nav__avatar-wrap">
             <button
               ref={menuToggleRef}
               type="button"
@@ -114,6 +114,7 @@ export function AppNav({ email, avatarUrl }: Props) {
                 justifyContent: "center",
                 fontFamily: "var(--font-mono)",
                 fontSize: 11,
+                lineHeight: 1,
                 cursor: "pointer",
                 border: "1px solid var(--rule)",
               }}

@@ -473,14 +473,7 @@ export default async function BillingPage({
             <h2 className="gf-h4" style={{ margin: 0 }}>
               Plans
             </h2>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                gap: 16,
-              }}
-              className="billing__plans"
-            >
+            <div className="billing__plans">
               <PlanCard
                 card={PLAN_CARDS[0]}
                 active={effectivePlanId === "free"}

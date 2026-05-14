@@ -676,6 +676,9 @@ button { font-family: inherit; }
 .nav__actions { display: flex; gap: 16px; align-items: center; }
 .nav__cta { padding: 9px 16px; font-size: 11px; }
 
+/* Account avatar + dropdown anchor */
+.nav__avatar-wrap { position: relative; display: inline-flex; align-items: center; }
+
 .nav__mobile-toggle {
   display: none;
   width: 36px; height: 36px;
@@ -739,6 +742,7 @@ button { font-family: inherit; }
   .nav__links { display: none; }
   .nav__actions > .nav__cta { display: none; }
   .nav__actions > .theme-toggle { display: none; }
+  .nav__actions > .nav__avatar-wrap { display: none; }
   .nav__mobile-toggle { display: inline-flex; }
   .wordmark > span { display: none; }
 }
@@ -1029,6 +1033,14 @@ button { font-family: inherit; }
 /* === Billing — usage grid + PAYG stepper === */
 .billing-usage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 @media (max-width: 720px) { .billing-usage { grid-template-columns: 1fr; } }
+
+/* Plans grid on /settings/billing — 3 cols desktop, stack on mobile */
+.billing__plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 860px) { .billing__plans { grid-template-columns: 1fr; } }
+
+/* Dashboard usage + activity row — 2 cols desktop, stack on mobile */
+.dashboard__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 720px) { .dashboard__grid { grid-template-columns: 1fr; } }
 .billing-usage > div { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--rule); background: var(--surface); }
 .billing-usage strong { font-family: var(--font-sans); font-size: 22px; font-weight: 700; letter-spacing: -.02em; color: var(--fg-1); }
 .billing-usage small { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); }
