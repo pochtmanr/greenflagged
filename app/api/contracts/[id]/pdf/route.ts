@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadBusinessProfile } from "@/lib/contracts/business";
+import { isSupportedLocale } from "@/lib/contracts/i18n";
 import { fetchLogo } from "@/lib/pdf/logo";
 import { renderContractPdf } from "@/lib/pdf/render-themed";
 import { coerceStyle } from "@/lib/pdf/themes";
@@ -16,6 +17,8 @@ export async function GET(
   const { id } = await params;
   const url = new URL(req.url);
   const asDownload = url.searchParams.get("download") === "1";
+  const localeParam = url.searchParams.get("locale");
+  const locale = isSupportedLocale(localeParam) ? localeParam : "en";
 
   const supabase = await getSupabaseServer();
   const {
@@ -35,17 +38,38 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { data: version, error: vErr } = await supabase
+  // body_md_translations is added in migration 0008; cast through any since
+  // Supabase types may not be regenerated yet.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any;
+  const { data: version, error: vErr } = (await sb
     .from("contract_versions")
-    .select("body_md, version")
+    .select("body_md, body_md_translations, version")
     .eq("contract_id", id)
     .order("version", { ascending: false })
     .limit(1)
-    .maybeSingle();
+    .maybeSingle()) as {
+    data: {
+      body_md: string | null;
+      body_md_translations: Record<string, string> | null;
+      version: number;
+    } | null;
+    error: unknown;
+  };
 
   if (vErr || !version?.body_md) {
     return NextResponse.json({ error: "No contract body" }, { status: 404 });
   }
+
+  const cachedTranslation =
+    locale !== "en" ? version.body_md_translations?.[locale] : null;
+  if (locale !== "en" && !cachedTranslation) {
+    return NextResponse.json(
+      { error: `No translation cached for ${locale}` },
+      { status: 404 },
+    );
+  }
+  const body_md = cachedTranslation ?? version.body_md;
 
   const style = coerceStyle(contract.style);
   const business = await loadBusinessProfile(supabase, contract.business_profile_id);
@@ -57,7 +81,7 @@ export async function GET(
   let pdf: Buffer;
   try {
     pdf = await renderContractPdf({
-      body_md: version.body_md,
+      body_md,
       title: contract.title ?? "Contract",
       style,
       logo_data_url: logo?.dataUrl,
@@ -73,7 +97,9 @@ export async function GET(
     );
   }
 
-  const filename = sanitizeFilename(contract.title ?? "contract") + ".pdf";
+  const localeSuffix = locale !== "en" ? `-${locale}` : "";
+  const filename =
+    sanitizeFilename(contract.title ?? "contract") + localeSuffix + ".pdf";
   const disposition = asDownload ? "attachment" : "inline";
   return new NextResponse(new Uint8Array(pdf), {
     status: 200,

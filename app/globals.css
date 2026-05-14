@@ -399,8 +399,10 @@ button { font-family: inherit; }
 .gf-tag.sev-orange { color: #6E3500;           border-color: var(--sev-orange); background: var(--sev-orange-tint); }
 .gf-tag.sev-red    { color: var(--sev-red);    border-color: var(--sev-red);    background: var(--sev-red-tint); }
 
-/* Buttons */
-.gf-btn {
+/* Buttons — base styles apply to all variants so each variant works standalone */
+.gf-btn,
+.gf-btn-ghost,
+.gf-btn-accent {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 500;
@@ -416,13 +418,24 @@ button { font-family: inherit; }
   gap: 10px;
   transition: background 120ms ease, color 120ms ease, transform 120ms ease, border-color 120ms ease;
   text-decoration: none;
+  line-height: 1;
 }
 .gf-btn:hover    { background: var(--green-700); border-color: var(--green-700); color: var(--paper-50); }
-.gf-btn:active   { transform: translateY(1px); }
-.gf-btn .arrow   { transition: transform 160ms ease; display: inline-block; }
-.gf-btn:hover .arrow { transform: translateX(4px); }
+.gf-btn:active,
+.gf-btn-ghost:active,
+.gf-btn-accent:active { transform: translateY(1px); }
+.gf-btn .arrow,
+.gf-btn-ghost .arrow,
+.gf-btn-accent .arrow { transition: transform 160ms ease; display: inline-block; }
+.gf-btn:hover .arrow,
+.gf-btn-ghost:hover .arrow,
+.gf-btn-accent:hover .arrow { transform: translateX(4px); }
 .gf-btn:disabled,
-.gf-btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+.gf-btn[aria-disabled="true"],
+.gf-btn-ghost:disabled,
+.gf-btn-ghost[aria-disabled="true"],
+.gf-btn-accent:disabled,
+.gf-btn-accent[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
 
 .gf-btn-ghost {
   background: transparent; color: var(--fg-1); border-color: var(--fg-1);
@@ -437,6 +450,46 @@ button { font-family: inherit; }
   border-bottom: 1px solid currentColor;
 }
 .gf-btn-link:hover { color: var(--green-700); }
+
+/* Soft accent — tertiary action. Subordinate to .gf-btn but clearly clickable
+   thanks to a tinted green surface (no transparent ghost confusion). */
+.gf-btn-accent-soft {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 12px 18px;
+  background: var(--green-50);
+  color: var(--green-700);
+  border: 1px solid var(--green-200);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  text-decoration: none;
+}
+.gf-btn-accent-soft:hover {
+  background: var(--green-100);
+  border-color: var(--green-300);
+  color: var(--green-900);
+}
+.gf-btn-accent-soft:disabled,
+.gf-btn-accent-soft[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+:root[data-theme="dark"] .gf-btn-accent-soft {
+  background: rgba(74, 122, 92, 0.15);
+  border-color: rgba(148, 181, 161, 0.35);
+  color: var(--green-300);
+}
+:root[data-theme="dark"] .gf-btn-accent-soft:hover {
+  background: rgba(74, 122, 92, 0.25);
+  border-color: var(--green-300);
+  color: var(--green-200);
+}
 
 /* Accent — sage filled (used for primary CTAs that want color over ink) */
 .gf-btn-accent {
@@ -1053,21 +1106,53 @@ button { font-family: inherit; }
 .cookie-banner__actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 
 /* === Legal page body === */
-.legal-body { display: flex; flex-direction: column; gap: 18px; color: var(--fg-2); font-size: 15px; line-height: 1.7; }
-.legal-body p { margin: 0; }
+.legal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: var(--fg-2);
+  font-family: var(--font-sans);
+  font-size: 15.5px;
+  line-height: 1.72;
+  font-weight: 400;
+}
+.legal-body p { margin: 0; font-weight: 400; }
 .legal-body strong { color: var(--fg-1); font-weight: 600; }
+.legal-body em { color: var(--fg-2); font-style: italic; }
 .legal-body a { color: var(--fg-1); border-bottom: 1px solid currentColor; }
 .legal-body a:hover { color: var(--accent-strong); }
-.legal-body ul, .legal-body ol { padding-left: 20px; margin: 0; display: flex; flex-direction: column; gap: 8px; }
-.legal-body h2, .legal-body h3 {
+.legal-body ul, .legal-body ol {
+  padding-left: 22px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-weight: 400;
+}
+.legal-body li { padding-left: 2px; }
+.legal-body h1 {
   font-family: var(--font-sans);
-  text-transform: uppercase;
+  font-size: 28px;
+  font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--fg-1);
-  margin: 12px 0 4px;
+  margin: 0 0 12px;
+  line-height: 1.2;
 }
-.legal-body h2 { font-size: 22px; font-weight: 700; }
-.legal-body h3 { font-size: 17px; font-weight: 600; }
+.legal-body h2, .legal-body h3 {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-1);
+  margin: 16px 0 4px;
+}
+.legal-body h2 { font-size: 13px; font-weight: 600; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+.legal-body h3 { font-size: 12px; font-weight: 600; }
+.legal-body hr {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 8px 0;
+}
 
 /* === Page-level responsive grids === */
 .about__grid,

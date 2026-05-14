@@ -32,16 +32,20 @@ export type ThemedPdfArgs = {
 export const PAGE_MARGIN_X = 56;
 export const PAGE_MARGIN_Y = 56;
 
+// Paper tone matches the on-screen preview (.doc-preview in globals.css).
+export const PAPER_BG = "#FBFAF6";
+
 export function pageStyle(s: ResolvedStyle) {
   return StyleSheet.create({
     page: {
       paddingTop: PAGE_MARGIN_Y,
       paddingBottom: PAGE_MARGIN_Y,
       paddingHorizontal: PAGE_MARGIN_X,
+      backgroundColor: PAPER_BG,
       fontSize: 11,
       fontFamily: s.fonts.body,
       color: s.colors.ink,
-      lineHeight: 1.55,
+      lineHeight: 1.6,
     },
   }).page;
 }
@@ -51,21 +55,23 @@ export function blockStyles(s: ResolvedStyle) {
     h1: {
       fontSize: 22,
       fontFamily: s.fonts.heading,
-      color: s.colors.ink,
-      marginBottom: 6,
+      color: s.colors.accent,
+      marginBottom: 12,
+      letterSpacing: -0.2,
     },
     h2: {
-      fontSize: 13,
+      fontSize: 15,
       fontFamily: s.fonts.heading,
       color: s.colors.accent,
-      marginTop: 16,
+      marginTop: 20,
       marginBottom: 6,
+      letterSpacing: -0.1,
     },
     h3: {
-      fontSize: 11.5,
+      fontSize: 12.5,
       fontFamily: s.fonts.heading,
-      color: s.colors.ink,
-      marginTop: 12,
+      color: s.colors.accent,
+      marginTop: 14,
       marginBottom: 4,
     },
     subtitle: {
@@ -74,14 +80,15 @@ export function blockStyles(s: ResolvedStyle) {
       color: s.colors.muted,
       marginBottom: 14,
     },
-    para: { marginBottom: 8 },
+    para: { marginBottom: 10, marginTop: 4 },
     bullet: { flexDirection: "row", marginBottom: 4 },
     bulletDot: { width: 18, color: s.colors.accent, fontFamily: s.fonts.bodyBold },
     bulletBody: { flex: 1 },
     hr: {
       borderBottomWidth: 1,
       borderBottomColor: s.colors.rule,
-      marginVertical: 14,
+      borderBottomStyle: "dashed",
+      marginVertical: 18,
     },
     footer: {
       marginTop: 14,
@@ -308,6 +315,7 @@ function CoverPage({
       paddingTop: 96,
       paddingBottom: 64,
       paddingHorizontal: 64,
+      backgroundColor: PAPER_BG,
       fontFamily: resolved.fonts.body,
       color: resolved.colors.ink,
       alignItems: "center",

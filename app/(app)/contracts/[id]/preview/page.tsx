@@ -112,6 +112,7 @@ export default async function ContractPreviewPage({ params }: Props) {
           </div>
 
           <PreviewClient
+            contractId={id}
             title={contract.title ?? "Untitled contract"}
             bodyMd={latest.body_md}
             translations={translations}
@@ -119,7 +120,6 @@ export default async function ContractPreviewPage({ params }: Props) {
             businessName={businessName}
             businessAddress={businessAddress}
             logoSrc={logoSignedUrl}
-            pdfHref={`/api/contracts/${id}/pdf`}
           />
         </div>
       </div>

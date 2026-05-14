@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadBusinessProfile } from "@/lib/contracts/business";
+import { isSupportedLocale } from "@/lib/contracts/i18n";
 import { renderContractDocx } from "@/lib/docx/render";
 import { fetchLogo } from "@/lib/pdf/logo";
 import { coerceStyle } from "@/lib/pdf/themes";
@@ -10,10 +11,13 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const url = new URL(req.url);
+  const localeParam = url.searchParams.get("locale");
+  const locale = isSupportedLocale(localeParam) ? localeParam : "en";
 
   const supabase = await getSupabaseServer();
   const {
@@ -32,16 +36,34 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { data: version, error: vErr } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any;
+  const { data: version, error: vErr } = (await sb
     .from("contract_versions")
-    .select("body_md")
+    .select("body_md, body_md_translations")
     .eq("contract_id", id)
     .order("version", { ascending: false })
     .limit(1)
-    .maybeSingle();
+    .maybeSingle()) as {
+    data: {
+      body_md: string | null;
+      body_md_translations: Record<string, string> | null;
+    } | null;
+    error: unknown;
+  };
   if (vErr || !version?.body_md) {
     return NextResponse.json({ error: "No contract body" }, { status: 404 });
   }
+
+  const cachedTranslation =
+    locale !== "en" ? version.body_md_translations?.[locale] : null;
+  if (locale !== "en" && !cachedTranslation) {
+    return NextResponse.json(
+      { error: `No translation cached for ${locale}` },
+      { status: 404 },
+    );
+  }
+  const body_md = cachedTranslation ?? version.body_md;
 
   const style = coerceStyle(contract.style);
   const business = await loadBusinessProfile(supabase, contract.business_profile_id);
@@ -53,7 +75,7 @@ export async function GET(
   let docx: Buffer;
   try {
     docx = await renderContractDocx({
-      body_md: version.body_md,
+      body_md,
       title: contract.title ?? "Contract",
       style,
       logo_buffer: logo?.buffer,
@@ -69,7 +91,9 @@ export async function GET(
     );
   }
 
-  const filename = sanitizeFilename(contract.title ?? "contract") + ".docx";
+  const localeSuffix = locale !== "en" ? `-${locale}` : "";
+  const filename =
+    sanitizeFilename(contract.title ?? "contract") + localeSuffix + ".docx";
   return new NextResponse(new Uint8Array(docx), {
     status: 200,
     headers: {

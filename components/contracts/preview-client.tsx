@@ -7,6 +7,7 @@ import type { ContractStyle } from "@/lib/pdf/themes";
 import { StyledMarkdown } from "./styled-markdown";
 
 type Props = {
+  contractId: string;
   title: string;
   bodyMd: string;
   translations: Record<string, string>;
@@ -14,10 +15,10 @@ type Props = {
   businessName: string | null;
   businessAddress: string | null;
   logoSrc: string | null;
-  pdfHref: string;
 };
 
 export function PreviewClient({
+  contractId,
   title,
   bodyMd,
   translations,
@@ -25,7 +26,6 @@ export function PreviewClient({
   businessName,
   businessAddress,
   logoSrc,
-  pdfHref,
 }: Props) {
   const [locale, setLocale] = React.useState<Locale>("en");
 
@@ -46,6 +46,14 @@ export function PreviewClient({
           : "Not translated",
     disabled: o.value !== "en" && !translations[o.value],
   }));
+
+  const localeQuery = locale === "en" ? "" : `?locale=${locale}`;
+  const pdfHref = `/api/contracts/${contractId}/pdf${localeQuery}`;
+  const pdfDownloadHref = `/api/contracts/${contractId}/pdf?download=1${
+    locale === "en" ? "" : `&locale=${locale}`
+  }`;
+  const docxDownloadHref = `/api/contracts/${contractId}/docx${localeQuery}`;
+  const canDownload = previewBody !== null;
 
   return (
     <div
@@ -70,7 +78,7 @@ export function PreviewClient({
         ) : (
           <div className="gf-card">
             <p className="gf-body" style={{ color: "var(--fg-2)", margin: 0 }}>
-              This language isn't translated yet. Open the editor and click{" "}
+              This language isn&apos;t translated yet. Open the editor and click{" "}
               <strong>Translate with AI</strong> for {locale.toUpperCase()}.
             </p>
           </div>
@@ -90,7 +98,7 @@ export function PreviewClient({
           className="gf-card"
           style={{ display: "flex", flexDirection: "column", gap: 10 }}
         >
-          <span className="gf-label">// LANGUAGE</span>
+          <span className="gf-label">{"// LANGUAGE"}</span>
           <Dropdown
             value={locale}
             onChange={(v) => setLocale(v as Locale)}
@@ -98,27 +106,54 @@ export function PreviewClient({
             placeholder="Language"
             aria-label="Preview language"
           />
+          <p
+            className="gf-mono-sm"
+            style={{ color: "var(--fg-3)", margin: 0, fontSize: 11 }}
+          >
+            Downloads and print use this language.
+          </p>
         </div>
+
         <div
           className="gf-card"
           style={{ display: "flex", flexDirection: "column", gap: 8 }}
         >
-          <a
-            href={pdfHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="gf-btn"
-          >
-            Open PDF <span className="arrow">→</span>
-          </a>
-          <a
-            href={`${pdfHref}?download=1`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="gf-btn-ghost"
-          >
-            Download PDF
-          </a>
+          <span className="gf-label">{"// DOWNLOAD"}</span>
+          {canDownload ? (
+            <>
+              <a
+                href={pdfDownloadHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="gf-btn"
+              >
+                Download PDF <span className="arrow">→</span>
+              </a>
+              <a
+                href={docxDownloadHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="gf-btn"
+              >
+                Download DOCX <span className="arrow">→</span>
+              </a>
+              <a
+                href={pdfHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="gf-btn-accent-soft"
+              >
+                Open / Print PDF
+              </a>
+            </>
+          ) : (
+            <p
+              className="gf-mono-sm"
+              style={{ color: "var(--fg-3)", margin: 0 }}
+            >
+              Translate this language to enable downloads.
+            </p>
+          )}
         </div>
       </aside>
 

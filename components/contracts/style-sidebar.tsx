@@ -3,8 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { Dropdown } from "@/components/ui/dropdown";
+import { DEFAULT_STYLE } from "@/lib/pdf/themes";
 import type {
-  Accent,
   ContractStyle,
   Layout,
   LogoPlacement,
@@ -26,6 +26,8 @@ type Props = {
   onProfileChange: (id: string | null) => void;
 };
 
+const INK_DEFAULT = "#0E110F";
+
 export function StyleSidebar({
   value,
   onChange,
@@ -42,13 +44,59 @@ export function StyleSidebar({
     })),
   ];
 
+  const brandColorValue =
+    value.accent === "brand" ? value.brand_color ?? INK_DEFAULT : INK_DEFAULT;
+
+  const handleBrandColorChange = (hex: string) => {
+    if (!hex || hex.toLowerCase() === INK_DEFAULT.toLowerCase()) {
+      // Picking the ink default collapses back to the neutral "ink" accent.
+      onChange({ ...value, accent: "ink", brand_color: undefined });
+      return;
+    }
+    onChange({ ...value, accent: "brand", brand_color: hex });
+  };
+
+  const isDefault =
+    value.typography === DEFAULT_STYLE.typography &&
+    value.accent === DEFAULT_STYLE.accent &&
+    value.layout === DEFAULT_STYLE.layout &&
+    value.logo_placement === DEFAULT_STYLE.logo_placement &&
+    !value.brand_color;
+
+  const restoreDefaults = () => {
+    onChange({ ...DEFAULT_STYLE });
+  };
+
   return (
     <>
       <div
         className="gf-card"
         style={{ display: "flex", flexDirection: "column", gap: 14 }}
       >
-        <span className="gf-label">// STYLE</span>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
+          <span className="gf-label">{"// STYLE"}</span>
+          <button
+            type="button"
+            className="gf-btn-link"
+            onClick={restoreDefaults}
+            disabled={isDefault}
+            title="Reset style to defaults"
+            style={{
+              fontSize: 11,
+              opacity: isDefault ? 0.4 : 1,
+              cursor: isDefault ? "default" : "pointer",
+            }}
+          >
+            Restore defaults
+          </button>
+        </div>
         <StyleSection
           label="Typography"
           value={value.typography}
@@ -61,30 +109,38 @@ export function StyleSidebar({
             onChange({ ...value, typography: v as Typography })
           }
         />
-        <StyleSection
-          label="Color accent"
-          value={value.accent}
-          options={[
-            { value: "ink", label: "Ink" },
-            { value: "brand", label: "Brand" },
-          ]}
-          onChange={(v) => onChange({ ...value, accent: v as Accent })}
-        />
-        {value.accent === "brand" ? (
-          <label className="style-sidebar__field">
-            <span className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
-              Brand color
+        <label className="style-sidebar__field">
+          <span className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
+            Brand color
+          </span>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span
+              className="gf-mono-sm"
+              style={{
+                color: "var(--fg-3)",
+                fontSize: 11,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {value.accent === "brand"
+                ? (value.brand_color ?? INK_DEFAULT).toUpperCase()
+                : "Ink"}
             </span>
             <input
               type="color"
-              value={value.brand_color ?? "#0E110F"}
-              onChange={(e) =>
-                onChange({ ...value, brand_color: e.target.value })
-              }
+              value={brandColorValue}
+              onChange={(e) => handleBrandColorChange(e.target.value)}
               className="style-sidebar__color"
+              aria-label="Brand color"
             />
-          </label>
-        ) : null}
+          </span>
+        </label>
         <StyleSection
           label="Layout"
           value={value.layout}
@@ -123,7 +179,7 @@ export function StyleSidebar({
         className="gf-card"
         style={{ display: "flex", flexDirection: "column", gap: 12 }}
       >
-        <span className="gf-label">// BUSINESS PROFILE</span>
+        <span className="gf-label">{"// BUSINESS PROFILE"}</span>
         <Dropdown
           value={selectedProfileId ?? ""}
           onChange={(v) => onProfileChange(v === "" ? null : v)}

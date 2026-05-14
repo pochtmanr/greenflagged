@@ -102,8 +102,8 @@ export function AppNav({ email, avatarUrl }: Props) {
               aria-expanded={menuOpen}
               aria-label="Account menu"
               style={{
-                width: 36,
-                height: 36,
+                width: 32,
+                height: 32,
                 borderRadius: 9999,
                 overflow: "hidden",
                 padding: 0,
@@ -113,7 +113,7 @@ export function AppNav({ email, avatarUrl }: Props) {
                 alignItems: "center",
                 justifyContent: "center",
                 fontFamily: "var(--font-mono)",
-                fontSize: 12,
+                fontSize: 11,
                 cursor: "pointer",
                 border: "1px solid var(--rule)",
               }}
@@ -124,8 +124,8 @@ export function AppNav({ email, avatarUrl }: Props) {
                   alt=""
                   referrerPolicy="no-referrer"
                   loading="lazy"
-                  width={36}
-                  height={36}
+                  width={32}
+                  height={32}
                   style={{
                     width: "100%",
                     height: "100%",

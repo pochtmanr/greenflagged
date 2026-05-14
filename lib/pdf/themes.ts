@@ -73,6 +73,27 @@ export const DOCX_FONTS: Record<Typography, { heading: string; body: string; mon
   classic: { heading: "Times New Roman", body: "Times New Roman", mono: "Courier New" },
 };
 
+// Browser-side font stacks shared by the on-screen `.doc-preview` and the
+// live editor surface. The PDF renderer above can only use bundled families,
+// so it has its own `FONTS` map.
+export const DOC_PREVIEW_FONTS: Record<
+  Typography,
+  { heading: string; body: string }
+> = {
+  editorial: {
+    heading: '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif',
+    body: '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif',
+  },
+  modern: {
+    heading: '"Arial", "Helvetica", sans-serif',
+    body: '"Arial", "Helvetica", sans-serif',
+  },
+  classic: {
+    heading: '"Times New Roman", Times, serif',
+    body: '"Times New Roman", Times, serif',
+  },
+};
+
 const INK_HEX = "#0E110F";
 
 export function resolveStyle(s: ContractStyle): ResolvedStyle {

@@ -47,13 +47,11 @@ function formatElapsed(ms: number) {
 
 function ScanProgress({
   phase,
-  mode,
   modelLabel,
   modelProvider,
   fileName,
 }: {
   phase: "parsing" | "reviewing";
-  mode: Mode;
   modelLabel: string;
   modelProvider: string;
   fileName: string;
@@ -70,22 +68,6 @@ function ScanProgress({
   }, []);
 
   const tickerIdx = Math.floor(elapsed / 2200) % REVIEW_TICKER.length;
-  const showExtract = mode === "upload";
-  const steps: { label: string; state: "done" | "active" | "pending" }[] = [];
-  if (showExtract) {
-    steps.push({
-      label: "Extract text from document",
-      state: phase === "parsing" ? "active" : "done",
-    });
-  }
-  steps.push({
-    label: `Review with ${modelLabel}`,
-    state: phase === "reviewing" ? "active" : "pending",
-  });
-  steps.push({
-    label: "Build verdict & redlines",
-    state: "pending",
-  });
 
   return (
     <div
@@ -110,9 +92,6 @@ function ScanProgress({
         @keyframes gf-scan-pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.35; transform: scale(0.78); }
-        }
-        @keyframes gf-scan-spin {
-          to { transform: rotate(360deg); }
         }
       `}</style>
 
@@ -171,33 +150,6 @@ function ScanProgress({
         />
       </div>
 
-      <ul
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-          padding: 0,
-          margin: 0,
-          listStyle: "none",
-        }}
-      >
-        {steps.map((step, i) => (
-          <li
-            key={i}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              color:
-                step.state === "pending" ? "var(--fg-4)" : "var(--fg-1)",
-            }}
-          >
-            <StepIcon state={step.state} />
-            <span className="gf-mono-sm">{step.label}</span>
-          </li>
-        ))}
-      </ul>
-
       <div
         className="gf-mono-sm"
         style={{
@@ -221,59 +173,6 @@ function ScanProgress({
         automatically when ready.
       </div>
     </div>
-  );
-}
-
-function StepIcon({ state }: { state: "done" | "active" | "pending" }) {
-  if (state === "done") {
-    return (
-      <span
-        aria-hidden
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 18,
-          height: 18,
-          borderRadius: "50%",
-          background: "var(--green-500)",
-          color: "var(--paper-0, #fff)",
-          fontSize: 11,
-          lineHeight: 1,
-          fontWeight: 700,
-        }}
-      >
-        ✓
-      </span>
-    );
-  }
-  if (state === "active") {
-    return (
-      <span
-        aria-hidden
-        style={{
-          display: "inline-block",
-          width: 18,
-          height: 18,
-          borderRadius: "50%",
-          border: "2px solid var(--paper-400)",
-          borderTopColor: "var(--green-500)",
-          animation: "gf-scan-spin 0.9s linear infinite",
-        }}
-      />
-    );
-  }
-  return (
-    <span
-      aria-hidden
-      style={{
-        display: "inline-block",
-        width: 18,
-        height: 18,
-        borderRadius: "50%",
-        border: "1px dashed var(--paper-400)",
-      }}
-    />
   );
 }
 
@@ -437,7 +336,6 @@ export function ScanForm() {
       {busy ? (
         <ScanProgress
           phase={phase.kind as "parsing" | "reviewing"}
-          mode={mode}
           modelLabel={selectedModel?.label ?? model}
           modelProvider={selectedModel?.provider ?? "openai"}
           fileName={fileName}

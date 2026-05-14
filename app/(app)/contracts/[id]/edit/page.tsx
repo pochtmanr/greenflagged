@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ContractEditor } from "@/components/contracts/contract-editor";
+import { loadBusinessProfile } from "@/lib/contracts/business";
 import { coerceStyle, DEFAULT_STYLE } from "@/lib/pdf/themes";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
@@ -87,6 +88,26 @@ export default async function ContractEditPage({ params }: Props) {
   const initialStyle = coerceStyle(contract.style) ?? DEFAULT_STYLE;
   const cachedTranslations = latest?.body_md_translations ?? null;
 
+  // Resolve the current business profile for live editor preview (logo +
+  // company name + address) so the editor surface mirrors what the PDF /
+  // /preview page will produce.
+  const business = await loadBusinessProfile(
+    supabase,
+    contract.business_profile_id,
+  );
+  const businessName =
+    business?.business_name ||
+    [business?.first_name, business?.family_name].filter(Boolean).join(" ") ||
+    null;
+  const businessAddress = business?.address_line ?? null;
+  let logoSignedUrl: string | null = null;
+  if (business?.logo_path && initialStyle.logo_placement !== "none") {
+    const { data: signed } = await supabase.storage
+      .from("contracts")
+      .createSignedUrl(business.logo_path, 60 * 30);
+    logoSignedUrl = signed?.signedUrl ?? null;
+  }
+
   return (
     <section className="section" style={{ paddingTop: 64 }}>
       <div className="app-shell">
@@ -104,7 +125,7 @@ export default async function ContractEditPage({ params }: Props) {
               className="gf-label"
               style={{ color: "var(--accent-strong)" }}
             >
-              // EDIT CONTRACT
+              {"// EDIT CONTRACT"}
             </span>
             <p
               className="gf-mono-sm"
@@ -122,6 +143,9 @@ export default async function ContractEditPage({ params }: Props) {
             initialBusinessProfileId={contract.business_profile_id}
             initialTranslations={cachedTranslations}
             profiles={profiles}
+            initialLogoSrc={logoSignedUrl}
+            initialBusinessName={businessName}
+            initialBusinessAddress={businessAddress}
           />
         </div>
       </div>

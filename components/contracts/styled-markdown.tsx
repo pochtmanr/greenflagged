@@ -2,7 +2,11 @@
 
 import * as React from "react";
 import ReactMarkdown from "react-markdown";
-import { resolveStyle, type ContractStyle } from "@/lib/pdf/themes";
+import {
+  DOC_PREVIEW_FONTS,
+  resolveStyle,
+  type ContractStyle,
+} from "@/lib/pdf/themes";
 
 type Props = {
   body_md: string;
@@ -11,21 +15,6 @@ type Props = {
   logoSrc?: string | null;
   businessName?: string | null;
   businessAddress?: string | null;
-};
-
-const FONT_STACKS: Record<ContractStyle["typography"], { heading: string; body: string }> = {
-  editorial: {
-    heading: '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif',
-    body: '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif',
-  },
-  modern: {
-    heading: '"Arial", "Helvetica", sans-serif',
-    body: '"Arial", "Helvetica", sans-serif',
-  },
-  classic: {
-    heading: '"Times New Roman", Times, serif',
-    body: '"Times New Roman", Times, serif',
-  },
 };
 
 export function StyledMarkdown({
@@ -37,7 +26,7 @@ export function StyledMarkdown({
   businessAddress,
 }: Props) {
   const resolved = resolveStyle(style);
-  const fonts = FONT_STACKS[style.typography];
+  const fonts = DOC_PREVIEW_FONTS[style.typography];
   const cssVars: React.CSSProperties = {
     "--doc-font-heading": fonts.heading,
     "--doc-font-body": fonts.body,
