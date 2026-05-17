@@ -8,15 +8,15 @@ export type ModelEntry = {
 };
 
 // Only two models are exposed in code now:
-//   • gpt-5.4-mini — the default for every workflow.
-//   • gpt-4o       — used explicitly by `/api/contracts/improve` (text
-//                    improvement on /contracts/new) and by translation
-//                    (lib/contracts/i18n.ts).
+//   • gpt-5-mini — the default for every workflow.
+//   • gpt-4o     — used explicitly by `/api/contracts/improve` (text
+//                  improvement on /contracts/new) and by translation
+//                  (lib/contracts/i18n.ts).
 // Other model ids passed via overrides are coerced to the default below.
 export const MODEL_CATALOG: ModelEntry[] = [
   {
-    id: "gpt-5.4-mini",
-    label: "ChatGPT 5.4 mini",
+    id: "gpt-5-mini",
+    label: "GPT-5 mini",
     provider: "openai",
     hint: "Default · fast · cheap",
   },
@@ -28,7 +28,7 @@ export const MODEL_CATALOG: ModelEntry[] = [
   },
 ];
 
-export const DEFAULT_MODEL_ID = "gpt-5.4-mini";
+export const DEFAULT_MODEL_ID = "gpt-5-mini";
 
 const BY_ID = new Map(MODEL_CATALOG.map((m) => [m.id, m]));
 

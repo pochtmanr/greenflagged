@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
 import { reviewContract, type Redline } from "@/lib/ai/review";
+import { guardQuota } from "@/lib/billing/guard";
 import { extractContractText, truncate } from "@/lib/parse";
-import { getSupabaseServiceRole } from "@/lib/supabase/server";
+import { getSupabaseServer, getSupabaseServiceRole } from "@/lib/supabase/server";
 import type { VerdictSeverity } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// Public hero-funnel preview: no auth, no persistence of contract content,
-// strict per-IP soft rate-limit. Returns a teaser verdict; the full report
-// is gated behind sign-up.
+// Public hero-funnel preview: anonymous traffic is IP-rate-limited; signed-in
+// traffic is metered against the same per-account quota as /api/scan, so a
+// logged-in user can't bypass "Out of contracts" by scanning from the hero.
 
 // Preview runs on the same default model as the authed /scan route — see
-// lib/ai/models.ts (gpt-5.4-mini).
+// DEFAULT_MODEL_ID in lib/ai/models.ts.
 import { DEFAULT_MODEL_ID } from "@/lib/ai/models";
 const PREVIEW_MODEL_ID = DEFAULT_MODEL_ID;
 
@@ -158,30 +159,42 @@ export async function POST(req: Request) {
     );
   }
 
-  const ip = clientIp(req);
   const admin = getSupabaseServiceRole();
 
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count, error: countError } = await admin
-    .from("preview_events")
-    .select("id", { count: "exact", head: true })
-    .eq("ip", ip)
-    .gte("created_at", since);
+  // Auth probe: if a Supabase session cookie is present, this scan must count
+  // against the account's monthly quota (same gate as /api/scan). Anonymous
+  // visitors fall through to the IP rate limit below.
+  const supabase = await getSupabaseServer();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user ?? null;
 
-  if (countError) {
-    // Fail open — we'd rather serve the preview than lose a conversion to a
-    // transient DB hiccup. The lib client will throw with a clear message if
-    // env vars are missing in production.
-    console.warn("preview_events count failed", countError.message);
-  } else if ((count ?? 0) >= MAX_PER_IP_PER_DAY) {
-    return NextResponse.json(
-      {
-        error:
-          "Free preview limit reached for today. Sign up free to keep scanning.",
-        code: "rate_limited",
-      },
-      { status: 429 },
-    );
+  if (user) {
+    const { blocked } = await guardQuota(user.id, "scan");
+    if (blocked) return blocked;
+  } else {
+    const ip = clientIp(req);
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count, error: countError } = await admin
+      .from("preview_events")
+      .select("id", { count: "exact", head: true })
+      .eq("ip", ip)
+      .gte("created_at", since);
+
+    if (countError) {
+      // Fail open — we'd rather serve the preview than lose a conversion to a
+      // transient DB hiccup. The lib client will throw with a clear message if
+      // env vars are missing in production.
+      console.warn("preview_events count failed", countError.message);
+    } else if ((count ?? 0) >= MAX_PER_IP_PER_DAY) {
+      return NextResponse.json(
+        {
+          error:
+            "Free preview limit reached for today. Sign up free to keep scanning.",
+          code: "rate_limited",
+        },
+        { status: 429 },
+      );
+    }
   }
 
   const extracted = truncate(payload.text);
@@ -197,10 +210,23 @@ export async function POST(req: Request) {
     );
   }
 
-  await admin.from("preview_events").insert({
-    ip,
-    severity: result.severity,
-  });
+  if (user) {
+    // Count this preview against the user's monthly scan quota so the hero
+    // can't be used to dodge the dashboard's "Out of contracts" gate.
+    const usageInsert = await admin.from("usage_events").insert({
+      user_id: user.id,
+      kind: "scan",
+      contract_id: null,
+    });
+    if (usageInsert.error) {
+      console.error("[scan/preview] usage_events insert failed", usageInsert.error.message);
+    }
+  } else {
+    await admin.from("preview_events").insert({
+      ip: clientIp(req),
+      severity: result.severity,
+    });
+  }
 
   const counts = countFlags(result.redlines);
   const teaser = firstSerious(result.redlines);

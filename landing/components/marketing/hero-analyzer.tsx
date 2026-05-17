@@ -5,7 +5,7 @@ import Link from "next/link";
 
 type Severity = "green" | "yellow" | "orange" | "red";
 type Mode = "upload" | "paste";
-type Phase = "idle" | "ready" | "submitting" | "done" | "error";
+type Phase = "idle" | "ready" | "submitting" | "done" | "error" | "paywall";
 
 type PreviewResponse = {
   severity: Severity;
@@ -30,6 +30,7 @@ const STATUS_COPY: Record<Mode, Record<Phase, string>> = {
     submitting: "REVIEWING WITH AI…",
     done: "VERDICT READY",
     error: "REVIEW FAILED",
+    paywall: "OUT OF CONTRACTS",
   },
   paste: {
     idle: "AWAITING PASTE",
@@ -37,6 +38,7 @@ const STATUS_COPY: Record<Mode, Record<Phase, string>> = {
     submitting: "REVIEWING WITH AI…",
     done: "VERDICT READY",
     error: "REVIEW FAILED",
+    paywall: "OUT OF CONTRACTS",
   },
 };
 
@@ -59,6 +61,7 @@ export function HeroAnalyzer() {
   const [phase, setPhase] = React.useState<Phase>("idle");
   const [error, setError] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<PreviewResponse | null>(null);
+  const [paywallUrl, setPaywallUrl] = React.useState<string>("/settings/billing");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const charCount = text.length;
@@ -134,8 +137,14 @@ export function HeroAnalyzer() {
       }
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as
-          | { error?: string }
+          | { error?: string; code?: string; paywall_url?: string }
           | null;
+        if (res.status === 402 || data?.error === "quota_exceeded") {
+          setPaywallUrl(data?.paywall_url ?? "/settings/billing");
+          setError(null);
+          setPhase("paywall");
+          return;
+        }
         setError(data?.error ?? `Preview failed (${res.status})`);
         setPhase("error");
         return;
@@ -264,7 +273,7 @@ export function HeroAnalyzer() {
               color:
                 phase === "done"
                   ? "var(--sev-green)"
-                  : phase === "error"
+                  : phase === "error" || phase === "paywall"
                   ? "var(--sev-red)"
                   : "var(--fg-2)",
             }}
@@ -283,6 +292,38 @@ export function HeroAnalyzer() {
         </div>
       ) : null}
 
+      {phase === "paywall" ? (
+        <div
+          style={{
+            marginTop: 12,
+            padding: "14px 16px",
+            border: "1px solid var(--sev-red)",
+            background: "rgba(255, 99, 99, 0.06)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
+        >
+          <span className="gf-label" style={{ color: "var(--sev-red)" }}>
+            // quota
+          </span>
+          <div className="hero-analyzer__headline" style={{ margin: 0 }}>
+            Out of contracts.
+          </div>
+          <p className="gf-mono-sm" style={{ color: "var(--fg-2)", margin: 0 }}>
+            You&apos;ve used your free scan this month. Upgrade or top up to
+            keep scanning.
+          </p>
+          <Link
+            href={paywallUrl}
+            className="gf-btn gf-btn-accent"
+            style={{ alignSelf: "flex-start", marginTop: 4 }}
+          >
+            Upgrade plan <span className="arrow">→</span>
+          </Link>
+        </div>
+      ) : null}
+
       <div className="hero-analyzer__cta">
         <span className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
           Free preview · 3/day · no account
@@ -293,16 +334,40 @@ export function HeroAnalyzer() {
           disabled={!canSubmit}
           onClick={submit}
         >
-          {phase === "submitting"
-            ? "Reviewing…"
-            : phase === "done"
-            ? "Verdict ready"
-            : "Run free verdict"}{" "}
+          {phase === "submitting" ? (
+            <>
+              <span className="hero-spinner" aria-hidden />
+              Reviewing…
+            </>
+          ) : phase === "done" ? (
+            "Verdict ready"
+          ) : (
+            "Run free verdict"
+          )}{" "}
           <span className="arrow">→</span>
         </button>
       </div>
 
       {phase === "done" && result ? <HeroVerdictTeaser data={result} /> : null}
+
+      <style jsx>{`
+        .hero-spinner {
+          display: inline-block;
+          width: 12px;
+          height: 12px;
+          margin-right: 8px;
+          vertical-align: -1px;
+          border: 2px solid currentColor;
+          border-right-color: transparent;
+          border-radius: 50%;
+          animation: hero-spin 0.7s linear infinite;
+        }
+        @keyframes hero-spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }

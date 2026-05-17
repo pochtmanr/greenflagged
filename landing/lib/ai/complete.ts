@@ -51,19 +51,46 @@ export async function complete(args: CompleteArgs): Promise<string> {
     : baseTokens;
 
   if (model.provider === "openai") {
-    const res = await openai().chat.completions.create({
-      model: model.id,
-      max_completion_tokens: maxTokens,
-      response_format: args.json ? { type: "json_object" } : undefined,
-      messages: [
-        { role: "system", content: args.system },
-        { role: "user", content: args.user },
-      ],
-    });
+    let res;
+    try {
+      res = await openai().chat.completions.create({
+        model: model.id,
+        max_completion_tokens: maxTokens,
+        response_format: args.json ? { type: "json_object" } : undefined,
+        messages: [
+          { role: "system", content: args.system },
+          { role: "user", content: args.user },
+        ],
+      });
+    } catch (err) {
+      const status =
+        typeof err === "object" && err && "status" in err
+          ? (err as { status: unknown }).status
+          : undefined;
+      const code =
+        typeof err === "object" && err && "code" in err
+          ? (err as { code: unknown }).code
+          : undefined;
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[ai.complete] OpenAI request failed", {
+        model: model.id,
+        status,
+        code,
+        message,
+      });
+      throw new Error(
+        `OpenAI request failed (model=${model.id}, status=${status ?? "?"}): ${message}`,
+      );
+    }
     const choice = res.choices[0];
     const content = choice?.message?.content;
     if (typeof content !== "string" || !content) {
       const finish = choice?.finish_reason ?? "unknown";
+      console.error("[ai.complete] OpenAI response was empty", {
+        model: model.id,
+        finish_reason: finish,
+        usage: res.usage,
+      });
       throw new Error(
         `OpenAI response was empty (model=${model.id}, finish_reason=${finish}). ` +
           (finish === "length"
