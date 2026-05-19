@@ -1,3 +1,4 @@
+import "./pdf-polyfill";
 import { PDFParse } from "pdf-parse";
 
 export async function extractPdfText(buf: Buffer): Promise<string> {
