@@ -151,6 +151,19 @@ function validateText(raw: string): ReadResult {
 }
 
 export async function POST(req: Request) {
+  try {
+    return await handlePreview(req);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[scan/preview] unhandled error", message);
+    return NextResponse.json(
+      { error: message, code: "server_misconfig" },
+      { status: 500 },
+    );
+  }
+}
+
+async function handlePreview(req: Request) {
   const payload = await readPreviewPayload(req);
   if (!payload.ok) {
     return NextResponse.json(

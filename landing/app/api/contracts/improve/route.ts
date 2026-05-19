@@ -41,8 +41,6 @@ export async function POST(req: Request) {
 
   try {
     const out = await complete({
-      // Text improvement on /contracts/new is pinned to gpt-4o.
-      model: "gpt-4o",
       system: SYSTEMS[field_kind],
       user: text,
       maxTokens: 1024,
