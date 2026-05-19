@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { reviewContract, type Redline } from "@/lib/ai/review";
 import { guardQuota } from "@/lib/billing/guard";
 import { extractContractText, truncate } from "@/lib/parse";
-import { getSupabaseServer, getSupabaseServiceRole } from "@/lib/supabase/server";
+import { getSupabaseFromRequest, getSupabaseServiceRole } from "@/lib/supabase/server";
 import type { VerdictSeverity } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
@@ -164,7 +164,7 @@ export async function POST(req: Request) {
   // Auth probe: if a Supabase session cookie is present, this scan must count
   // against the account's monthly quota (same gate as /api/scan). Anonymous
   // visitors fall through to the IP rate limit below.
-  const supabase = await getSupabaseServer();
+  const supabase = await getSupabaseFromRequest();
   const { data: authData } = await supabase.auth.getUser();
   const user = authData?.user ?? null;
 

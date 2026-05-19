@@ -5,7 +5,7 @@ import { chargeOverage } from "@/lib/billing/revolut";
 import { getIndustry } from "@/lib/contracts";
 import { renderContractPdf } from "@/lib/pdf/render";
 import { isContractStyle, type ContractStyle } from "@/lib/pdf/themes";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseFromRequest } from "@/lib/supabase/server";
 import type { ContractIndustry } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const supabase = await getSupabaseServer();
+  const supabase = await getSupabaseFromRequest();
   const {
     data: { user },
   } = await supabase.auth.getUser();

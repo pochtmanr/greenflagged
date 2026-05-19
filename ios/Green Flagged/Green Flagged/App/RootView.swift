@@ -7,16 +7,22 @@ struct RootView: View {
         ZStack {
             Color.gf.bg.ignoresSafeArea()
 
-            if session.isLoading {
-                Wordmark()
-            } else if session.userId == nil {
-                // Phase 2: SignInView()
-                Wordmark()
-            } else {
-                // Phase 3: MainTabsView()
-                Wordmark()
+            switch session.authState {
+            case .loading:
+                BrandMark()
+                    .transition(.opacity)
+            case .signedOut:
+                SignInView()
+                    .transition(.opacity)
+            case .needsOnboarding:
+                OnboardingFlow()
+                    .transition(.opacity)
+            case .signedIn:
+                MainTabsView()
+                    .transition(.opacity)
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: session.authState)
         .task { await session.bootstrap() }
     }
 }

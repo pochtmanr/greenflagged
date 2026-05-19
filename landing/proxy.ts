@@ -11,6 +11,11 @@ const PUBLIC_AUTH_PATHS = [
 ];
 
 export async function proxy(req: NextRequest) {
+  const auth = req.headers.get("authorization");
+  if (auth?.startsWith("Bearer ") && req.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
   const res = NextResponse.next();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

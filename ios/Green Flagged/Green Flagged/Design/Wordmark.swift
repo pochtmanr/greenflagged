@@ -7,9 +7,6 @@ struct Wordmark: View {
                 .font(.gf.label)
                 .tracking(1.2)
                 .foregroundStyle(Color.gf.fg1)
-            Circle()
-                .fill(Color.gf.accentStrong)
-                .frame(width: 6, height: 6)
             Text("FLAGGED")
                 .font(.gf.label)
                 .tracking(1.2)
@@ -18,9 +15,25 @@ struct Wordmark: View {
     }
 }
 
+struct BrandMark: View {
+    var logoSize: CGFloat = 64
+
+    var body: some View {
+        VStack(spacing: Spacing.s4) {
+            Image("BrandLogo")
+                .resizable()
+                .renderingMode(.template)
+                .foregroundStyle(Color.gf.accent)
+                .scaledToFit()
+                .frame(width: logoSize, height: logoSize)
+            Wordmark()
+        }
+    }
+}
+
 #Preview {
     ZStack {
         Color.gf.bg.ignoresSafeArea()
-        Wordmark()
+        BrandMark()
     }
 }

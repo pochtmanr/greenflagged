@@ -19,6 +19,12 @@ enum AppConfig {
     nonisolated static let supabaseAnonKey: String = try! readString("SUPABASE_ANON_KEY")
     nonisolated static let apiBaseURL: URL = try! readAPIBase()
 
+    /// Universal callback URL for OAuth flows. Must match the
+    /// `CFBundleURLSchemes` entry in Info.plist and the redirect URL
+    /// configured in the Supabase dashboard (Authentication → URL
+    /// Configuration → Redirect URLs).
+    nonisolated static let authCallbackURL: URL = URL(string: "xyz.flag.green://auth/callback")!
+
     nonisolated private static func readAPIBase() throws -> URL {
         #if DEBUG
         return try readURL("API_BASE_URL_DEBUG")

@@ -4,7 +4,7 @@ import { loadBusinessProfile } from "@/lib/contracts/business";
 import { fetchLogo } from "@/lib/pdf/logo";
 import { renderReportPdf } from "@/lib/pdf/render-report";
 import { coerceStyle } from "@/lib/pdf/themes";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseFromRequest } from "@/lib/supabase/server";
 import type { VerdictSeverity } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
@@ -24,7 +24,7 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const supabase = await getSupabaseServer();
+  const supabase = await getSupabaseFromRequest();
   const {
     data: { user },
   } = await supabase.auth.getUser();

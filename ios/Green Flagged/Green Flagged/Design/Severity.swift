@@ -1,6 +1,11 @@
 import SwiftUI
 
-enum Severity: String, Codable, Sendable, CaseIterable {
+/// `nonisolated` so the synthesized `Codable` conformance is callable from
+/// the background actors that run our PostgREST repositories. The
+/// view-facing `color` getter is then re-isolated to `MainActor` because it
+/// reads `Color.gf.sev*` static colors that the project defaults to that
+/// actor.
+nonisolated enum Severity: String, Codable, Sendable, CaseIterable {
     case green
     case yellow
     case orange
@@ -15,6 +20,7 @@ enum Severity: String, Codable, Sendable, CaseIterable {
         }
     }
 
+    @MainActor
     var color: Color {
         switch self {
         case .green:  Color.gf.sevGreen

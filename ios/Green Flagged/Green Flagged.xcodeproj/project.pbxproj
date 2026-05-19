@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A1A1A1A101000000000000A1 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1A1A1A100000000000000A1 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		3852B06A2FB68D97000F88B5 /* Green Flagged.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Green Flagged.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3852B0902FB68D97000F88B5 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Secrets.xcconfig; path = ../Secrets.xcconfig; sourceTree = SOURCE_ROOT; };
@@ -24,6 +28,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1A1A1A101000000000000A1 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -67,6 +72,7 @@
 			);
 			name = "Green Flagged";
 			packageProductDependencies = (
+				A1A1A1A100000000000000A1 /* Supabase */,
 			);
 			productName = "Green Flagged";
 			productReference = 3852B06A2FB68D97000F88B5 /* Green Flagged.app */;
@@ -96,6 +102,9 @@
 			);
 			mainGroup = 3852B0612FB68D97000F88B5;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A1A1A1A102000000000000A1 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3852B06B2FB68D97000F88B5 /* Products */;
 			projectDirPath = "";
@@ -250,6 +259,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Green Flagged/Green Flagged.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = F7YY9U667A;
@@ -286,6 +296,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Green Flagged/Green Flagged.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = F7YY9U667A;
@@ -339,6 +350,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A1A1A1A102000000000000A1 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.46.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A1A1A1A100000000000000A1 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1A1A1A102000000000000A1 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3852B0622FB68D97000F88B5 /* Project object */;
 }

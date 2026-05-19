@@ -4,7 +4,7 @@ import { reviewContract } from "@/lib/ai/review";
 import { guardQuota } from "@/lib/billing/guard";
 import { chargeOverage } from "@/lib/billing/revolut";
 import { extensionFor, extractContractText, truncate } from "@/lib/parse";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseFromRequest } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -84,7 +84,7 @@ async function readPayload(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const supabase = await getSupabaseServer();
+  const supabase = await getSupabaseFromRequest();
   const {
     data: { user },
     error: userError,
