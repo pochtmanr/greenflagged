@@ -5,6 +5,16 @@ const nextConfig: NextConfig = {
   images: {
     qualities: [75, 85],
   },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.greenflagged.xyz" }],
+        destination: "https://greenflagged.xyz/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
