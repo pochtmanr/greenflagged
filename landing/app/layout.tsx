@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { SITE_URL, SITE_NAME } from "@/lib/config";
 import { OrganizationSchema, WebSiteSchema } from "@/lib/seo/json-ld";
+import { ChatWidget } from "@/components/ChatWidget";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -109,6 +110,7 @@ export default function RootLayout({
         {children}
         <Toaster position="bottom-right" richColors closeButton />
         <Analytics />
+        <ChatWidget />
       </body>
     </html>
   );
