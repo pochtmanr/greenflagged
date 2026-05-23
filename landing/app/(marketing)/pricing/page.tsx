@@ -57,9 +57,9 @@ export default async function PricingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(PRICING_JSONLD) }}
       />
-      <section className="section" style={{ paddingTop: 144 }}>
+      <section className="section" style={{ paddingTop: 144, paddingBottom: 24 }}>
         <div className="container">
-          <div style={{ maxWidth: 760, marginBottom: 56 }}>
+          <div style={{ maxWidth: 760 }}>
             <span className="gf-label">// PRICING</span>
             <h1 className="gf-h1" style={{ marginTop: 14 }}>
               Simple,{" "}
@@ -74,7 +74,7 @@ export default async function PricingPage() {
         </div>
       </section>
 
-      <Pricing signedIn={signedIn} />
+      <Pricing signedIn={signedIn} hideHeading />
 
       <section className="section--thin">
         <div className="container">

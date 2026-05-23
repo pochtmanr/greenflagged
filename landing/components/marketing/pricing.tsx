@@ -16,7 +16,7 @@ type Tier = {
   features: Feature[];
 };
 
-type Props = { signedIn?: boolean };
+type Props = { signedIn?: boolean; hideHeading?: boolean };
 
 const TIERS: Tier[] = [
   {
@@ -77,14 +77,20 @@ function ctaHref(tier: Tier, signedIn: boolean): string {
   return `/sign-up?intent=upgrade&plan=${tier.id}`;
 }
 
-export function Pricing({ signedIn = false }: Props = {}) {
+export function Pricing({ signedIn = false, hideHeading = false }: Props = {}) {
   return (
-    <section id="pricing" className="section">
+    <section
+      id="pricing"
+      className="section"
+      style={hideHeading ? { paddingTop: 0 } : undefined}
+    >
       <div className="container" style={{ position: "relative" }}>
-        <SectionHeading
-          eyebrow="// 04  Pricing"
-          lead="Free, Pay as you go, or Standard. USD, monthly, no yearly lock-in."
-        />
+        {hideHeading ? null : (
+          <SectionHeading
+            eyebrow="// 04  Pricing"
+            lead="Free, Pay as you go, or Standard. USD, monthly, no yearly lock-in."
+          />
+        )}
         <div className="pricing__grid">
           {TIERS.map((t, i) => (
             <Reveal

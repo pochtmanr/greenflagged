@@ -274,8 +274,8 @@ export function HeroAnalyzer() {
                 phase === "done"
                   ? "var(--sev-green)"
                   : phase === "error" || phase === "paywall"
-                  ? "var(--sev-red)"
-                  : "var(--fg-2)",
+                    ? "var(--sev-red)"
+                    : "var(--fg-2)",
             }}
           >
             {STATUS_COPY[mode][phase]}
@@ -326,7 +326,7 @@ export function HeroAnalyzer() {
 
       <div className="hero-analyzer__cta">
         <span className="gf-mono-sm" style={{ color: "var(--fg-3)" }}>
-          Free preview · 3/day · no account
+
         </span>
         <button
           type="button"

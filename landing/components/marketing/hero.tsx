@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { HeroAnalyzer } from "@/components/marketing/hero-analyzer";
+import { HeroPixels } from "@/components/marketing/hero-pixels";
 
 export function Hero() {
   return (
     <section className="hero hero--centerpiece">
+      <HeroPixels />
       <div className="container hero__stack">
         <header className="hero__head">
           <span className="gf-tag hero__eyebrow">
