@@ -31,7 +31,7 @@ actor ContractRepository {
 
         var query = supabase
             .from("contracts")
-            .select("id,owner_id,kind,industry,title,storage_path,verdict_severity,created_at,retention_until")
+            .select("id,owner_id,kind,industry,title,storage_path,verdict_severity,created_at,retention_until,style,business_profile_id")
 
         if let kind {
             query = query.eq("kind", value: kind.rawValue)
@@ -56,7 +56,7 @@ extension ContractRepository {
     func get(id: String) async throws -> Contract? {
         let rows: [Contract] = try await supabase
             .from("contracts")
-            .select("id,owner_id,kind,industry,title,storage_path,verdict_severity,created_at,retention_until")
+            .select("id,owner_id,kind,industry,title,storage_path,verdict_severity,created_at,retention_until,style,business_profile_id")
             .eq("id", value: id)
             .limit(1)
             .execute()
@@ -92,6 +92,35 @@ extension ContractRepository {
             .execute()
             .value
         return rows.first?.bodyMd
+    }
+
+    /// Returns every `contract_versions` row for the contract, newest first.
+    /// Used by the version-history sheet to show the audit trail.
+    func versions(contractId: String) async throws -> [ContractVersion] {
+        try await supabase
+            .from("contract_versions")
+            .select("id,version,created_at,body_md")
+            .eq("contract_id", value: contractId)
+            .order("version", ascending: false)
+            .execute()
+            .value
+    }
+}
+
+// MARK: - Mutations
+
+extension ContractRepository {
+    /// Deletes a contract row (RLS scopes to current user) and best-effort removes
+    /// the matching storage object. Cascading scans/versions follow the schema FKs.
+    func delete(id: String, storagePath: String?) async throws {
+        if let storagePath, !storagePath.isEmpty {
+            _ = try? await supabase.storage.from("contracts").remove(paths: [storagePath])
+        }
+        try await supabase
+            .from("contracts")
+            .delete()
+            .eq("id", value: id)
+            .execute()
     }
 }
 

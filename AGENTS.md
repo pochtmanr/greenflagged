@@ -1,21 +1,40 @@
 # Agent rules — Green Flagged monorepo
 
+## STOP — read this before touching anything (HARD RULE)
+
+Before any tool call that reads, edits, runs, or plans work in this repo, the
+agent MUST query MemPalace for project context. This is non-negotiable —
+previous agents skipped this step and broke things that were already documented.
+
+Minimum required calls before the first edit, command, or plan:
+
+1. `mempalace_status` — confirm the daemon is reachable.
+2. `mempalace_list_rooms` with `wing: "greenflagged"` — see what's documented.
+3. `mempalace_search` with `wing: "greenflagged"` and a query matching the
+   task (e.g. `"billing"`, `"paywall"`, `"scan flow"`, `"design tokens"`,
+   `"api contracts"`). Run this for EVERY distinct topic the task touches.
+4. For UI/design work, also pull the `design` room drawers via
+   `mempalace_list_drawers` with `wing: "greenflagged", room: "design"`.
+
+If MemPalace returns drawers, their content overrides training-data instincts,
+generic best practices, and anything else you "remember." If MemPalace is
+unreachable, say so out loud and ask before proceeding — do NOT silently fall
+back to guesses.
+
+CLI fallback if MCP is down:
+
+```
+mempalace search "<topic>" --wing greenflagged
+mempalace search "<topic>" --wing greenflagged --room design
+```
+
 ## Repo layout
 
 - `landing/` — Next.js 16 app (App Router, Turbopack, Tailwind v4, Supabase).
 - `ios/` — Native SwiftUI app, iOS 26+, Xcode 16.
 - `claude/` — Specs, ADRs, API contracts, design tokens, prompts.
 
-## Before any UI work
-
-Query MemPalace first:
-
-```
-mempalace search "<topic>" --wing greenflagged --room design
-```
-
-Or via MCP: `mempalace_search` with `wing: "greenflagged"`, `room: "design"`.
-The drawers there override generic design instincts.
+## Design rules (still query MemPalace first)
 
 Non-negotiable design rules (also in [`claude/design/tokens.md`](claude/design/tokens.md)):
 - Nav-on-scroll, cookie banner, and the hero chip are SOLID — no `backdrop-blur`.

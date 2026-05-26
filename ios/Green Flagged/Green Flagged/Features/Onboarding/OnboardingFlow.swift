@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// 3-step onboarding wizard. Mirrors the web flow at
-/// `landing/app/(app)/onboarding/page.tsx` (account-type → country →
-/// optional business name → commit).
+/// Onboarding wizard. Mirrors the web flow at
+/// `landing/app/(app)/onboarding/page.tsx` and `components/onboarding/wizard.tsx`:
+/// account-type → industries → country → optional business name → commit.
 ///
 /// On commit, `ProfileRepository.upsert(markOnboarded: true)` is called.
 /// `Session.refreshProfile()` then flips `authState` to `.signedIn` and the
@@ -13,6 +13,7 @@ struct OnboardingFlow: View {
     @State private var path: [OnboardingStep] = []
 
     @State private var accountType: AccountType = .solo
+    @State private var industries: Set<String> = []
     @State private var countryCode: String = (Locale.current.region?.identifier ?? "US").uppercased()
     @State private var businessName: String = ""
 
@@ -23,11 +24,20 @@ struct OnboardingFlow: View {
         NavigationStack(path: $path) {
             AccountTypeStep(
                 accountType: $accountType,
-                onContinue: { path.append(.country) },
+                onContinue: { path.append(.industries) },
                 onSignOut: { Task { await session.signOut() } }
             )
             .navigationDestination(for: OnboardingStep.self) { step in
                 switch step {
+                case .industries:
+                    IndustriesStep(
+                        industries: $industries,
+                        errorMessage: errorMessage,
+                        onContinue: {
+                            errorMessage = nil
+                            path.append(.country)
+                        }
+                    )
                 case .country:
                     CountryStep(
                         countryCode: $countryCode,
@@ -63,6 +73,12 @@ struct OnboardingFlow: View {
 
     private func commit() async {
         guard !isSubmitting else { return }
+        guard !industries.isEmpty else {
+            errorMessage = "Pick at least one industry."
+            // Pop back so the user sees the failing step.
+            path = [.industries]
+            return
+        }
         errorMessage = nil
         isSubmitting = true
         defer { isSubmitting = false }
@@ -72,6 +88,7 @@ struct OnboardingFlow: View {
                 accountType: accountType,
                 country: countryCode,
                 businessName: accountType == .business ? businessName : nil,
+                industries: Array(industries),
                 markOnboarded: true
             )
             await session.refreshProfile()
@@ -86,6 +103,7 @@ struct OnboardingFlow: View {
 // MARK: - Routes
 
 enum OnboardingStep: Hashable {
+    case industries
     case country
     case businessName
 }
@@ -97,6 +115,10 @@ private struct AccountTypeStep: View {
     var onContinue: () -> Void
     var onSignOut: () -> Void
 
+    private var totalSteps: String {
+        accountType == .business ? "04" : "03"
+    }
+
     var body: some View {
         ZStack {
             Color.gf.bg.ignoresSafeArea()
@@ -105,7 +127,7 @@ private struct AccountTypeStep: View {
                 VStack(alignment: .leading, spacing: Spacing.s5) {
                     StepHeader(
                         index: "01",
-                        total: "03",
+                        total: totalSteps,
                         title: "Who are you signing for?",
                         subtitle: "We tailor warnings and templates to your situation."
                     )
@@ -142,12 +164,10 @@ private struct AccountTypeStep: View {
     }
 }
 
-// MARK: - Step 2 — Country
+// MARK: - Step 2 — Industries
 
-private struct CountryStep: View {
-    @Binding var countryCode: String
-    let accountType: AccountType
-    let isSubmitting: Bool
+private struct IndustriesStep: View {
+    @Binding var industries: Set<String>
     let errorMessage: String?
     var onContinue: () -> Void
 
@@ -159,7 +179,143 @@ private struct CountryStep: View {
                 VStack(alignment: .leading, spacing: Spacing.s5) {
                     StepHeader(
                         index: "02",
-                        total: "03",
+                        total: "04",
+                        title: "What industries do you work in?",
+                        subtitle: "Pick as many as apply — we use this to tune templates and redlines."
+                    )
+
+                    GFCard {
+                        FlowLayout(spacing: Spacing.s2) {
+                            ForEach(ProfileIndustry.all) { industry in
+                                IndustryChip(
+                                    label: industry.label,
+                                    isSelected: industries.contains(industry.slug)
+                                ) {
+                                    toggle(industry.slug)
+                                }
+                            }
+                        }
+                    }
+
+                    if let errorMessage {
+                        HStack {
+                            Spacer()
+                            GFTag(label: errorMessage.uppercased(), severity: .red)
+                            Spacer()
+                        }
+                    }
+
+                    GFButton(
+                        label: "CONTINUE",
+                        style: .solid,
+                        isDisabled: industries.isEmpty,
+                        action: onContinue
+                    )
+                }
+                .padding(.horizontal, Spacing.s4)
+                .padding(.vertical, Spacing.s5)
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func toggle(_ slug: String) {
+        if industries.contains(slug) {
+            industries.remove(slug)
+        } else {
+            industries.insert(slug)
+        }
+    }
+}
+
+private struct IndustryChip: View {
+    let label: String
+    let isSelected: Bool
+    var onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            Text(label.uppercased())
+                .font(.gf.label)
+                .tracking(1.0)
+                .foregroundStyle(isSelected ? Color.gf.bg : Color.gf.fg2)
+                .padding(.horizontal, Spacing.s3)
+                .padding(.vertical, Spacing.s2)
+                .background(isSelected ? Color.gf.fg1 : Color.clear)
+                .overlay(
+                    Rectangle()
+                        .stroke(isSelected ? Color.gf.fg1 : Color.gf.rule, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Bare-bones flow layout that wraps children onto new lines as needed.
+/// Used by `IndustriesStep` so the 14 industry chips wrap across the
+/// available width without locking us into a grid column count.
+private struct FlowLayout: Layout {
+    let spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        var rowWidth: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var totalHeight: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if rowWidth + size.width > maxWidth, rowWidth > 0 {
+                totalHeight += rowHeight + spacing
+                rowWidth = 0
+                rowHeight = 0
+            }
+            rowWidth += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+        totalHeight += rowHeight
+        return CGSize(width: maxWidth.isFinite ? maxWidth : rowWidth, height: totalHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x: CGFloat = bounds.minX
+        var y: CGFloat = bounds.minY
+        var rowHeight: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x + size.width > bounds.maxX, x > bounds.minX {
+                x = bounds.minX
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            subview.place(at: CGPoint(x: x, y: y), proposal: .unspecified)
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+    }
+}
+
+// MARK: - Step 3 — Country
+
+private struct CountryStep: View {
+    @Binding var countryCode: String
+    let accountType: AccountType
+    let isSubmitting: Bool
+    let errorMessage: String?
+    var onContinue: () -> Void
+
+    private var totalSteps: String {
+        accountType == .business ? "04" : "03"
+    }
+
+    var body: some View {
+        ZStack {
+            Color.gf.bg.ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.s5) {
+                    StepHeader(
+                        index: "03",
+                        total: totalSteps,
                         title: "Where do you operate?",
                         subtitle: "Sets default jurisdiction for templates and warnings."
                     )
@@ -218,7 +374,7 @@ private struct CountryStep: View {
     }
 }
 
-// MARK: - Step 3 — Business name
+// MARK: - Step 4 — Business name
 
 private struct BusinessNameStep: View {
     @Binding var businessName: String
@@ -237,8 +393,8 @@ private struct BusinessNameStep: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.s5) {
                     StepHeader(
-                        index: "03",
-                        total: "03",
+                        index: "04",
+                        total: "04",
                         title: "What's your business called?",
                         subtitle: "Appears on the contracts you draft."
                     )

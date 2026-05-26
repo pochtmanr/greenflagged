@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { COUNTRY_CODES } from "@/lib/countries";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseFromRequest } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ const ProfileInput = z.object({
 });
 
 export async function GET() {
-  const supabase = await getSupabaseServer();
+  const supabase = await getSupabaseFromRequest();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -49,7 +49,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const supabase = await getSupabaseServer();
+  const supabase = await getSupabaseFromRequest();
   const {
     data: { user },
   } = await supabase.auth.getUser();

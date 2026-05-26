@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DashboardView: View {
     @Environment(Session.self) private var session
+    @Environment(EntitlementGate.self) private var gate
     @State private var vm = DashboardViewModel()
     @State private var showDraftWizard = false
 
@@ -115,12 +116,17 @@ struct DashboardView: View {
                         .tracking(1.0)
                         .foregroundStyle(Color.gf.fg2)
                     Spacer()
-                    GFTag(label: "FREE TIER")
-                    // TODO: derive from subscriptions table once billing schema ships (next session).
+                    GFTag(
+                        label: gate.isStandard ? "STANDARD" : "FREE TIER",
+                        severity: gate.isStandard ? .green : nil
+                    )
                 }
                 GFSpecRow(key: "SCANS", value: "\(data.scansThisMonth)")
                 GFSpecRow(key: "DRAFTS", value: "\(data.draftsThisMonth)")
                 GFSpecRow(key: "TOTAL", value: "\(data.totalUsedThisMonth)")
+                if gate.creditsRemaining > 0 {
+                    GFSpecRow(key: "CREDITS", value: "\(gate.creditsRemaining)")
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -311,19 +317,6 @@ private struct ContractRowView: View {
 
     private static func relative(_ date: Date) -> String {
         relativeFormatter.localizedString(for: date, relativeTo: Date())
-    }
-}
-
-// MARK: - Severity short labels
-
-private extension Severity {
-    var shortLabel: String {
-        switch self {
-        case .green:  "OK"
-        case .yellow: "WARN"
-        case .orange: "HIGH"
-        case .red:    "CRITICAL"
-        }
     }
 }
 

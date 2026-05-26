@@ -152,19 +152,21 @@ struct ContractsListView: View {
     }
 
     private var emptyState: some View {
-        HStack {
-            Spacer()
-            GFFrame {
-                VStack(alignment: .leading, spacing: Spacing.s3) {
-                    Text("// NO CONTRACTS YET")
-                        .font(.gf.label)
-                        .foregroundStyle(Color.gf.fg2)
-                    Text("Scan your first contract to see it here.")
-                        .font(.gf.bodySm)
-                        .foregroundStyle(Color.gf.fg3)
+        GFFrame {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                Text("// NO CONTRACTS YET")
+                    .font(.gf.label)
+                    .tracking(1.0)
+                    .foregroundStyle(Color.gf.fg2)
+                Text("Scan a contract to see it here. We'll review it and surface anything worth a redline.")
+                    .font(.gf.body)
+                    .foregroundStyle(Color.gf.fg1)
+                    .fixedSize(horizontal: false, vertical: true)
+                GFButton(label: "OPEN SCAN TAB", style: .solid, showsArrow: false) {
+                    AppTab.switchTo(.scan)
                 }
             }
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.top, Spacing.s5)
     }

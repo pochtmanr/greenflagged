@@ -23,8 +23,9 @@ export type SubscriptionStatus =
   | "past_due"
   | "canceled"
   | "expired";
-export type CreditSource = "payg_3usd" | "admin_grant";
-export type PaymentProvider = "revolut" | "oxapay";
+export type CreditSource = "payg_3usd" | "admin_grant" | "apple_payg";
+export type PaymentProvider = "revolut" | "oxapay" | "apple";
+export type SubscriptionProvider = PaymentProvider;
 export type PaymentKind =
   | "subscription_initial"
   | "subscription_renewal"
@@ -288,6 +289,9 @@ export interface Database {
           current_period_start: string | null;
           current_period_end: string | null;
           cancel_at_period_end: boolean;
+          provider: SubscriptionProvider;
+          apple_original_transaction_id: string | null;
+          apple_product_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -300,6 +304,9 @@ export interface Database {
           current_period_start?: string | null;
           current_period_end?: string | null;
           cancel_at_period_end?: boolean;
+          provider?: SubscriptionProvider;
+          apple_original_transaction_id?: string | null;
+          apple_product_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -312,6 +319,9 @@ export interface Database {
           current_period_start?: string | null;
           current_period_end?: string | null;
           cancel_at_period_end?: boolean;
+          provider?: SubscriptionProvider;
+          apple_original_transaction_id?: string | null;
+          apple_product_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -324,6 +334,7 @@ export interface Database {
           contracts_remaining: number;
           expires_at: string;
           source: CreditSource;
+          apple_transaction_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -332,6 +343,7 @@ export interface Database {
           contracts_remaining?: number;
           expires_at: string;
           source: CreditSource;
+          apple_transaction_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -340,6 +352,7 @@ export interface Database {
           contracts_remaining?: number;
           expires_at?: string;
           source?: CreditSource;
+          apple_transaction_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -356,6 +369,7 @@ export interface Database {
           status: PaymentStatus;
           provider: PaymentProvider;
           oxapay_track_id: string | null;
+          apple_transaction_id: string | null;
           raw: Json | null;
           created_at: string;
         };
@@ -370,6 +384,7 @@ export interface Database {
           status: PaymentStatus;
           provider?: PaymentProvider;
           oxapay_track_id?: string | null;
+          apple_transaction_id?: string | null;
           raw?: Json | null;
           created_at?: string;
         };
@@ -384,6 +399,7 @@ export interface Database {
           status?: PaymentStatus;
           provider?: PaymentProvider;
           oxapay_track_id?: string | null;
+          apple_transaction_id?: string | null;
           raw?: Json | null;
           created_at?: string;
         };
@@ -439,7 +455,22 @@ export interface Database {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      claim_apple_subscription: {
+        Args: {
+          p_original_transaction_id: string;
+          p_product_id: string;
+          p_expires_at: string;
+        };
+        Returns: Json;
+      };
+      claim_apple_payg: {
+        Args: {
+          p_transaction_id: string;
+          p_product_id: string;
+          p_quantity?: number;
+        };
+        Returns: Json;
+      };
     };
     Enums: {
       [_ in never]: never;

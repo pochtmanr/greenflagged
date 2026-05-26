@@ -113,7 +113,7 @@ ios/
 ```
 SUPABASE_URL = https:/$()/pwvtjuklkfelpxzxjmsi.supabase.co
 SUPABASE_ANON_KEY = sb_publishable_xxx
-API_BASE_URL = https:/$()/flag.red
+
 API_BASE_URL_DEBUG = http:/$()/127.0.0.1:3000
 ```
 
@@ -145,7 +145,7 @@ if let token = await session.currentAccessToken() {
 One `AppRouter @Observable` instance, four `NavigationPath`s (one per tab).
 Tabs: Dashboard · Scan · Contracts · Settings.
 
-Universal links (`https://flag.red/contracts/{id}` → in-app verdict) routed
+
 through `onOpenURL` → router push.
 
 ## Errors
@@ -181,7 +181,7 @@ No CocoaPods. No Carthage.
 
 - Debug: `API_BASE_URL_DEBUG` (localhost). Cmd+R from Xcode against the
   iOS 26 simulator.
-- Release: `API_BASE_URL` (flag.red). Archive via Xcode → upload to TestFlight.
+
 - CI: GitHub Actions or Xcode Cloud — defer to Phase 7.
 
 ## What's NOT in v1

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseFromRequest } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export async function POST(
 ) {
   const { id: profileId } = await params;
 
-  const supabase = await getSupabaseServer();
+  const supabase = await getSupabaseFromRequest();
   const {
     data: { user },
   } = await supabase.auth.getUser();

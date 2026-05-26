@@ -154,9 +154,3 @@ Then Roman runs on his iPhone:
 - Cold launch → splash shows logo over `GREEN FLAGGED` (no dot).
 - Sign out → sign-in shows the same brand mark; tapping TERMS opens Safari to `greenflagged.xyz/terms`; tapping PRIVACY opens `/privacy`.
 
-## Out of scope
-
-- Changing `BY CONTINUING…` copy beyond making TERMS / PRIVACY tappable.
-- Settings page Terms/Privacy URLs (still point at `flag.red`) — Prompt 6 fixes those.
-- Any other brand asset (favicon, app icon) — those exist already in `AppIcon.appiconset` and stay unchanged.
-- Light/dark mode tuning — `Color.gf.accent` is already dynamic.

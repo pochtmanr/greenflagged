@@ -25,6 +25,12 @@ struct MainTabsView: View {
                 .tag(AppTab.settings)
         }
         .tint(Color.gf.accent)
+        .onReceive(NotificationCenter.default.publisher(for: AppTab.switchNotification)) { note in
+            if let raw = note.userInfo?[AppTab.userInfoKey] as? String,
+               let tab = AppTab(rawValue: raw) {
+                selectedTab = tab
+            }
+        }
     }
 }
 
@@ -35,4 +41,19 @@ enum AppTab: String, Hashable, CaseIterable, Sendable {
     case scan
     case contracts
     case settings
+
+    /// Posted by deep-link-style nudges (empty-state CTAs, dashboard quick
+    /// actions outside the existing `Binding<AppTab>` plumbing). Observed by
+    /// `MainTabsView` to flip the selected tab.
+    static let switchNotification = Notification.Name("gf.tabs.switch")
+    static let userInfoKey = "tab"
+
+    /// Convenience post used by call-sites that just want to jump tabs.
+    static func switchTo(_ tab: AppTab) {
+        NotificationCenter.default.post(
+            name: switchNotification,
+            object: nil,
+            userInfo: [userInfoKey: tab.rawValue]
+        )
+    }
 }

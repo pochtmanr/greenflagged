@@ -22,7 +22,7 @@ mempalace_search wing="greenflagged" room="design" query="<topic>"
 
 ## What to build
 A native SwiftUI iOS app, **iOS 26 deployment target**, Xcode 16, Swift 6.
-Same brand, same data, same verdict logic as the web (`https://flag.red`).
+
 
 Brand identity (non-negotiable):
 - Sage green `#4A7A5C` primary. Dark `#121212` bg. Sharp 2px corners everywhere.
@@ -41,7 +41,7 @@ Brand identity (non-negotiable):
 ## Backend
 - **Supabase project ref:** `pwvtjuklkfelpxzxjmsi`
   URL: `https://pwvtjuklkfelpxzxjmsi.supabase.co`
-- **API base:** `https://flag.red` (prod), `http://127.0.0.1:3000` (debug)
+- **API base:** `https://greenflagged.xyz` (prod), `http://127.0.0.1:3000` (debug)
 - iOS authenticates with Supabase, then sends `Authorization: Bearer <access_token>`
   on every landing/ API call.
 - All AI provider keys stay server-side. Never ship Anthropic/OpenAI keys to mobile.
@@ -90,7 +90,7 @@ Brand identity (non-negotiable):
 - DB migration `landing/supabase/migrations/0012_apple_iap.sql` to add provider/Apple columns. Apply via Supabase dashboard SQL editor.
 
 ### Phase 7 — polish + submission
-- Universal Links (`flag.red/contracts/{id}` → `VerdictView`).
+- Universal Links (`greenflagged.xyz/contracts/{id}` → `VerdictView`).
 - APNs for renewal failures (Supabase Edge Function).
 - Screenshots, privacy nutrition label, App Store metadata.
 - TestFlight internal → external → submit.

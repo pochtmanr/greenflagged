@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { coerceStyle } from "@/lib/pdf/themes";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseFromRequest } from "@/lib/supabase/server";
 import type { Database, Json } from "@/lib/supabase/types";
 
 type ContractsUpdate = Database["public"]["Tables"]["contracts"]["Update"];
@@ -9,12 +9,21 @@ type ContractsUpdate = Database["public"]["Tables"]["contracts"]["Update"];
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Accepts both the current shape (`ink`/`brand`, `header_with_info`) and the
+// retired legacy values (`sage`, `footer`). `coerceStyle` collapses the legacy
+// cases before write, so storage stays in the current shape.
 const StyleSchema = z
   .object({
     typography: z.enum(["editorial", "modern", "classic"]),
     accent: z.enum(["sage", "ink", "brand"]),
     layout: z.enum(["single", "two-column", "cover"]),
-    logo_placement: z.enum(["header", "footer", "cover", "none"]),
+    logo_placement: z.enum([
+      "header",
+      "header_with_info",
+      "footer",
+      "cover",
+      "none",
+    ]),
     brand_color: z.string().optional(),
   })
   .strict();
@@ -32,7 +41,7 @@ export async function POST(
 ) {
   const { id } = await params;
 
-  const supabase = await getSupabaseServer();
+  const supabase = await getSupabaseFromRequest();
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { COUNTRY_CODES } from "@/lib/countries";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseFromRequest } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
 
-  const supabase = await getSupabaseServer();
+  const supabase = await getSupabaseFromRequest();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -108,7 +108,7 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
 
-  const supabase = await getSupabaseServer();
+  const supabase = await getSupabaseFromRequest();
   const {
     data: { user },
   } = await supabase.auth.getUser();

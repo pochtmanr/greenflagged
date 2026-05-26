@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		A1A1A1A101000000000000A1 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1A1A1A100000000000000A1 /* Supabase */; };
+		B1B1B1B101000000000000B1 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = B1B1B1B100000000000000B1 /* RevenueCat */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +30,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1A1A1A101000000000000A1 /* Supabase in Frameworks */,
+				B1B1B1B101000000000000B1 /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -73,6 +75,7 @@
 			name = "Green Flagged";
 			packageProductDependencies = (
 				A1A1A1A100000000000000A1 /* Supabase */,
+				B1B1B1B100000000000000B1 /* RevenueCat */,
 			);
 			productName = "Green Flagged";
 			productReference = 3852B06A2FB68D97000F88B5 /* Green Flagged.app */;
@@ -104,6 +107,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A1A1A1A102000000000000A1 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				B1B1B1B102000000000000B1 /* XCRemoteSwiftPackageReference "purchases-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3852B06B2FB68D97000F88B5 /* Products */;
@@ -360,6 +364,14 @@
 				minimumVersion = 2.46.0;
 			};
 		};
+		B1B1B1B102000000000000B1 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -367,6 +379,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A1A1A1A102000000000000A1 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		B1B1B1B100000000000000B1 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B1B1B1B102000000000000B1 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

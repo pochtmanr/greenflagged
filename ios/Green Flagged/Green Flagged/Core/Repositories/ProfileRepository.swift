@@ -46,6 +46,7 @@ actor ProfileRepository {
         accountType: AccountType,
         country: String,
         businessName: String?,
+        industries: [String]? = nil,
         markOnboarded: Bool
     ) async throws -> Profile {
         let user = try await supabase.auth.session.user
@@ -65,6 +66,13 @@ actor ProfileRepository {
             "business_name": resolvedBusinessName.map { .string($0) } ?? .null,
             "updated_at":    .string(Self.iso8601.string(from: Date())),
         ]
+
+        // Only include the column when the caller passed a value — `nil`
+        // preserves whatever the row already has (settings edits don't
+        // touch industries today).
+        if let industries {
+            payload["industries"] = .array(industries.map { .string($0) })
+        }
 
         if markOnboarded {
             payload["onboarded_at"] = .string(Self.iso8601.string(from: Date()))

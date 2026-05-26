@@ -31,8 +31,7 @@ Five distinct changes:
 1. **`GFDropdown` shared component** — a reusable dropdown styled to match the existing country `Picker(.menu)` chrome (`SettingsView.swift:155-172`). Both Settings and Onboarding will use it.
 2. **Settings: chips → dropdown** — account type (currently `GFButton` chips, lines 133–145) becomes a `GFDropdown`. Appearance picker (currently `.segmented`, lines 198–203) becomes a `GFDropdown`.
 3. **Onboarding: RadioCard → dropdown** — account-type step (`OnboardingFlow.swift:113-123`) swaps to the same `GFDropdown` component.
-4. **Terms / Privacy URL fix** — `SettingsView.swift:257,262` currently points to `flag.red`. Change both to `https://greenflagged.xyz/{terms,privacy}`.
-5. **Delete Account + Support** — new sections at the bottom of Settings:
+4. **Delete Account + Support** — new sections at the bottom of Settings:
    - **Delete Account** with confirm flow → call `DELETE /api/account` (creates this endpoint on the server) → clear keychain + sign out.
    - **Support** with two actions: "EMAIL US" (`mailto:hello@greenflagged.xyz`) and "SEND A QUERY" (prefilled mailto with device/app metadata in the body).
 
@@ -159,13 +158,6 @@ GFCard {
 
 You can now delete `RadioCard` and `RadioIndicator` (lines 307–354) — they're unused. Verify with grep before deleting.
 
-### Task 5 — Terms / Privacy URL fix
-
-In `SettingsView.swift` lines 257 and 262, change:
-- `https://flag.red/privacy` → `https://greenflagged.xyz/privacy`
-- `https://flag.red/terms` → `https://greenflagged.xyz/terms`
-
-### Task 6 — Support section
 
 Insert a `supportSection` view between `aboutSection` and `sessionSection` in `SettingsView.body`:
 
@@ -411,4 +403,4 @@ Manual smoke on a throwaway Supabase account (don't delete Roman's real account!
 - Wiring MANAGE BILLING — Prompt 7 owns that.
 - In-app support chat — mailto is the bar for this prompt.
 - Email + password account recovery flows — Supabase OAuth-only by design.
-- Migrating old `flag.red` URLs anywhere else (search the codebase for `flag.red` — Settings is the only known usage, but if more appear, fix them here).
+

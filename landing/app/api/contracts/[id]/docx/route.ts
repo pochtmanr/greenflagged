@@ -4,7 +4,7 @@ import { isSupportedLocale } from "@/lib/contracts/i18n";
 import { renderContractDocx } from "@/lib/docx/render";
 import { fetchLogo } from "@/lib/pdf/logo";
 import { coerceStyle } from "@/lib/pdf/themes";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseFromRequest } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export async function GET(
   const localeParam = url.searchParams.get("locale");
   const locale = isSupportedLocale(localeParam) ? localeParam : "en";
 
-  const supabase = await getSupabaseServer();
+  const supabase = await getSupabaseFromRequest();
   const {
     data: { user },
   } = await supabase.auth.getUser();

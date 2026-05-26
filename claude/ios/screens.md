@@ -107,7 +107,7 @@ ScrollView (vertical), sections separated by 24pt.
 
 2. **Quick actions row** — two `GFFrame` cards side by side:
    - `// SCAN A CONTRACT` + body + `→` arrow → push `ScanView`
-   - `// DRAFT A CONTRACT` + body + `→` arrow → push `DraftView` (v1.1; for v1, link out to flag.red/contracts/new)
+   - `// DRAFT A CONTRACT` + body + `→` arrow → push `DraftView` (v1.1; for v1, link out to greenflagged.xyz/contracts/new)  
 
 3. **Usage meter** — `GFCard` with two `GFSpecRow`:
    - `SCANS THIS MONTH ······· 3 / 10`
@@ -244,7 +244,7 @@ present `ShareLink` with `.pdf` content type.
 Sections (each is a `GFCard`):
 1. **Account** — email (read-only), account_type (Picker), country (Picker), business_name (TextField). "Save changes →" button writes via Supabase SDK.
 2. **Billing** — current plan tag + "Manage billing →" → `BillingView`.
-3. **About** — version string, "Privacy", "Terms" (opens Safari to flag.red/{privacy,terms}).
+3. **About** — version string, "Privacy", "Terms" (opens Safari to greenflagged.xyz/{privacy,terms}).
 4. **Sign out** — destructive `GFButton("Sign out →", style: .ghost)` with red tint.
 
 ---

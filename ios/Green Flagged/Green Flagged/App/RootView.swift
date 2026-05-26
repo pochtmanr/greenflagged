@@ -30,4 +30,5 @@ struct RootView: View {
 #Preview {
     RootView()
         .environment(Session())
+        .environment(EntitlementGate.shared)
 }

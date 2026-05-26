@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { coerceStyle, DEFAULT_STYLE } from "@/lib/pdf/themes";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseFromRequest } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
@@ -12,7 +12,7 @@ export async function POST(
 ) {
   const { id } = await params;
 
-  const supabase = await getSupabaseServer();
+  const supabase = await getSupabaseFromRequest();
   const {
     data: { user },
   } = await supabase.auth.getUser();

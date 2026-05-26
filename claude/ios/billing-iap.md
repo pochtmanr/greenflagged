@@ -1,254 +1,180 @@
-# iOS billing — StoreKit 2 + server reconciliation
+# iOS billing — RevenueCat + Supabase reconciliation
 
 ## The constraint
 
-Apple App Store guidelines (3.1.1) require IAP for digital goods/services
-sold inside an app. The web's Revolut and OxaPay flows are **web-only**.
-The iOS app sells the same plans via StoreKit 2 at higher prices to cover
-Apple's 15–30% cut.
+Apple App Store guideline 3.1.1 requires IAP for digital goods sold inside an
+app. The web's Revolut and OxaPay flows are **web-only**. iOS sells the same
+plans via the App Store at higher prices (Apple's 15–30% cut).
 
 Both clients write to the **same Supabase tables** (`subscriptions`, `credits`)
-so a user's balance is identical regardless of where they paid. No "Apple plan"
-vs "Web plan" — just one plan with one source of truth.
+so a user's balance is identical regardless of where they paid. There is no
+"Apple plan" vs "Web plan" — one plan, one source of truth.
+
+## Why RevenueCat (not StoreKit direct)
+
+The deciding factor is **server-side renewal events while the app is closed**.
+RC's webhook fires on `RENEWAL`, `EXPIRATION`, `BILLING_ISSUE`, `REFUND` etc.
+without depending on the app being open. With StoreKit-direct + App Store
+Server Notifications V2 we'd have to host JWS verification and Apple key
+rotation ourselves; RC handles all of it and lets us own the schema.
+
+The architecture mirrors Doppler's RevenueCat+Supabase pattern (see
+`/Users/roman/Developer/Doppler/ios/PulseVPN/Services/RevenueCatService.swift`)
+but Green Flagged uses Supabase as the canonical entitlement store (because
+web also writes to it), with RC's `customerInfo` only as a fallback when
+Supabase is unreachable.
 
 ## Products (App Store Connect)
 
 | Product ID | Type | Price | Equivalent web SKU |
 |---|---|---|---|
-| `gf.payg.credit.1` | Consumable | $3.99 (single) | `payg_3usd` × 1 |
+| `gf.payg.credit.1` | Consumable | $3.99 (1 credit) | `payg_3usd` × 1 |
 | `gf.standard.monthly` | Auto-renewable subscription | $28.99/mo | `standard` plan |
 
-(Bundle prices like `gf.payg.credit.5` for $17.99 can come later.)
+**Bundle:** `xyz.flag.green`. **Subscription group:** `Green Flagged Standard`.
 
-**App Store Connect setup checklist:**
-1. Create both products. Family for the subscription: `gf.standard`.
-2. App-Specific Shared Secret → `landing/.env` as `APPLE_SHARED_SECRET`.
-3. App Store Server Notifications V2 → URL
-   `https://flag.red/api/billing/apple/notifications`, version 2 only.
-4. Subscription group: `Standard subscriptions` — 1 tier (the monthly).
-5. Localized display names: "1 contract credit" / "Standard plan".
-6. Review notes: explain "Same as web app, sold via IAP per guidelines".
+## RevenueCat dashboard
 
-## Client flow (SwiftUI / StoreKit 2)
+- Project: `Green Flagged`, bundle id `xyz.flag.green`.
+- Entitlement: `standard` → mapped to `gf.standard.monthly`.
+- Offering: `default` with two packages (monthly subscription, consumable).
+- Webhook URL: `https://greenflagged.xyz/api/billing/revenuecat/webhook`, custom
+  header `Authorization: Bearer <REVENUECAT_WEBHOOK_SECRET>`.
 
-```swift
-@MainActor
-@Observable
-final class BillingService {
-    var products: [Product] = []
-    var purchaseInFlight: Product.ID? = nil
+## Env vars
 
-    func load() async throws {
-        products = try await Product.products(for: ProductCatalog.allIDs)
-    }
+- `landing/.env`: `REVENUECAT_WEBHOOK_SECRET` (random string; matches RC
+  dashboard custom header).
+- `ios/Secrets.xcconfig`: `REVENUECAT_IOS_API_KEY` (the public `appl_…` key
+  from the RC dashboard; the **secret** key never leaves the server).
 
-    func purchase(_ product: Product) async throws -> PurchaseOutcome {
-        let result = try await product.purchase()
-        switch result {
-        case .success(let verification):
-            let transaction = try verification.payloadValue
-            try await reconcile(transactionJWS: verification.jwsRepresentation,
-                                productID: product.id)
-            await transaction.finish()
-            return .success
-        case .userCancelled:  return .cancelled
-        case .pending:        return .pending
-        @unknown default:     return .cancelled
-        }
-    }
+## Schema
 
-    private func reconcile(transactionJWS: String, productID: String) async throws {
-        try await APIClient.shared.post(
-            "/api/billing/apple/webhook",
-            body: AppleReconcilePayload(
-                transactionJWS: transactionJWS,
-                productID: productID,
-                environment: Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
-                    ? "Sandbox" : "Production"
-            )
-        )
-    }
+`landing/supabase/migrations/0012_billing_apple.sql` adds:
 
-    /// Re-grant entitlements from any historical transactions
-    func restore() async throws {
-        for await result in Transaction.currentEntitlements {
-            if case .verified(let transaction) = result {
-                try await reconcile(
-                    transactionJWS: result.jwsRepresentation,
-                    productID: transaction.productID
-                )
-            }
-        }
-    }
-}
-```
+- `subscriptions.provider` (`'revolut' | 'oxapay' | 'apple'`), default
+  `'revolut'`.
+- `subscriptions.apple_original_transaction_id` (UNIQUE) and
+  `subscriptions.apple_product_id`.
+- `payments.apple_transaction_id` (UNIQUE) and extends
+  `payments.provider` to include `'apple'`.
+- `credits.apple_transaction_id` (UNIQUE) and extends `credits.source` to
+  include `'apple_payg'`.
 
-`ProductCatalog.allIDs` is a static `["gf.payg.credit.1", "gf.standard.monthly"]`.
+Plus two `SECURITY DEFINER` RPCs called by the iOS client immediately after
+purchase/restore:
 
-## Server endpoint — POST `/api/billing/apple/webhook`
+- `claim_apple_subscription(p_original_transaction_id, p_product_id, p_expires_at)` →
+  binds the originalTransactionId to the current `auth.uid()`. Returns
+  `{action:'success'}` on first claim or self-update, `{action:'rejected',
+  owner:<uuid>}` if another Supabase user already owns the receipt.
+- `claim_apple_payg(p_transaction_id, p_product_id, p_quantity)` →
+  inserts a `credits` row (`source='apple_payg'`,
+  `expires_at = now() + interval '90 days'`). Idempotent on
+  `apple_transaction_id`.
 
-**New file in `landing/`:** `app/api/billing/apple/webhook/route.ts`.
-
-Responsibility:
-1. Authenticate user via Bearer JWT (RLS-safe).
-2. Decode the signed transaction JWS using Apple's public keys
-   (use `app-store-server-api` package OR verify manually with JWK fetched from
-   `https://api.storekit.itunes.apple.com/inApps/v1/notifications/test`).
-3. Validate `bundleID` matches `xyz.flag.green` (or whatever the app ID is).
-4. Validate `transactionId` hasn't been reconciled before (insert into
-   `payments` keyed on `apple_transaction_id` UNIQUE).
-5. Branch on `product_id`:
-   - `gf.payg.credit.1`: insert `credits` row with `contracts_remaining = 1`,
-     `expires_at = now() + interval '90 days'`, `source = 'apple_payg'`.
-   - `gf.standard.monthly`: upsert `subscriptions` row with `plan = 'standard'`,
-     `status = 'active'`, `current_period_end = transaction.expiresDate`,
-     `provider = 'apple'`, `apple_original_transaction_id = transaction.originalTransactionId`.
-6. Insert `payments` audit row.
-7. Return current quota state.
-
-```ts
-// landing/app/api/billing/apple/webhook/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseFromRequest, getSupabaseServiceRole } from "@/lib/supabase/server";
-import { verifyAppleJWS } from "@/lib/billing/apple";   // new
-
-export const runtime = "nodejs";
-
-export async function POST(req: NextRequest) {
-  const supabase = await getSupabaseFromRequest();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-
-  const body = await req.json();
-  const tx = await verifyAppleJWS(body.transaction_jws);
-
-  if (tx.bundleId !== process.env.APPLE_BUNDLE_ID) {
-    return NextResponse.json({ error: "bundle_mismatch" }, { status: 400 });
-  }
-
-  const svc = getSupabaseServiceRole();
-
-  // dedupe
-  const { data: existing } = await svc
-    .from("payments")
-    .select("id")
-    .eq("apple_transaction_id", tx.transactionId)
-    .maybeSingle();
-  if (existing) {
-    return NextResponse.json({ ok: true, dedup: true });
-  }
-
-  if (tx.productId === "gf.payg.credit.1") {
-    await svc.from("credits").insert({
-      user_id: user.id,
-      contracts_remaining: 1,
-      expires_at: new Date(Date.now() + 90 * 86400_000).toISOString(),
-      source: "apple_payg",
-    });
-  } else if (tx.productId === "gf.standard.monthly") {
-    await svc.from("subscriptions").upsert({
-      user_id: user.id,
-      plan: "standard",
-      status: "active",
-      provider: "apple",
-      apple_original_transaction_id: tx.originalTransactionId,
-      current_period_start: new Date(tx.purchaseDate).toISOString(),
-      current_period_end: new Date(tx.expiresDate).toISOString(),
-    }, { onConflict: "user_id" });
-  }
-
-  await svc.from("payments").insert({
-    user_id: user.id,
-    apple_transaction_id: tx.transactionId,
-    provider: "apple",
-    kind: tx.productId === "gf.payg.credit.1" ? "one_off" : "subscription_initial",
-    amount_minor: tx.price ?? 0,
-    currency: tx.currency ?? "USD",
-    status: "succeeded",
-  });
-
-  return NextResponse.json({ ok: true });
-}
-```
-
-## Server endpoint — POST `/api/billing/apple/notifications`
-
-App Store Server Notifications V2 (renewals, refunds, billing retry).
-
-Handle these notification types:
-- `DID_RENEW` → upsert subscriptions with new period_end
-- `DID_FAIL_TO_RENEW` → status = `past_due`
-- `EXPIRED` → status = `canceled`
-- `REFUND` → mark payments.status = `refunded`, revoke credits if PAYG
-
-Verify the signed payload using Apple's public keys. No user auth (Apple is the
-caller); idempotency via `notificationUUID`.
-
-## DB migration needed
-
-New migration `landing/supabase/migrations/0012_apple_iap.sql`:
-
-```sql
-alter table payments
-  add column if not exists provider text not null default 'revolut'
-    check (provider in ('revolut','oxapay','apple')),
-  add column if not exists apple_transaction_id text unique;
-
-alter table subscriptions
-  add column if not exists provider text not null default 'revolut'
-    check (provider in ('revolut','oxapay','apple')),
-  add column if not exists apple_original_transaction_id text unique;
-
-alter table credits
-  drop constraint if exists credits_source_check,
-  add constraint credits_source_check
-    check (source in ('one_off_9eur','payg_3usd','apple_payg','admin_grant'));
-```
-
-## Env vars to add
+## Client flow (iOS)
 
 ```
-APPLE_BUNDLE_ID=xyz.flag.green
-APPLE_SHARED_SECRET=...                # from App Store Connect
-APPLE_ISSUER_ID=...                    # for App Store Server API
-APPLE_KEY_ID=...
-APPLE_PRIVATE_KEY_BASE64=...           # the .p8 file, base64-encoded
+[App launch]
+  Purchases.configure(withAPIKey: AppConfig.revenueCatAPIKey)
+  RevenueCatService.shared.configure()   // installs delegate
+  RevenueCatService.shared.fetchOfferings()
+
+[Sign in]
+  Session.refreshProfile(for: user)
+    → RevenueCatService.shared.logIn(userId: user.id.uuidString)
+    → EntitlementGate.shared.refresh()
+
+[Purchase]
+  BillingPaywallView → RevenueCatService.purchase(package, syncing: sync)
+    → Purchases.shared.purchase(package:)
+    → SubscriptionSyncService.claimSubscription(...)
+       → claim_apple_subscription RPC
+    → EntitlementGate.shared.refresh()
+
+[Restore]
+  RESTORE PURCHASES → RevenueCatService.restore(syncing:)
+    → Purchases.shared.restorePurchases()
+    → SubscriptionSyncService.claimSubscription(...)
+    → EntitlementGate.shared.refresh()
+
+[Sign out]
+  Session.signOut()
+    → RevenueCatService.shared.logOut()
+    → EntitlementGate.shared.reset()
 ```
 
-## Receipt validation
+## Server webhook — POST `/api/billing/revenuecat/webhook`
 
-Two options:
-1. **Decode JWS locally** with Apple's published JWK set (`/inApps/v1/keys`).
-   Fastest, no extra Apple API call. Use `jose` package (Edge-compatible).
-2. **Send to App Store Server API**. More auditable. Adds ~200ms per purchase.
+`landing/app/api/billing/revenuecat/webhook/route.ts`. Authentication: the
+RC dashboard sends a custom `Authorization: Bearer <REVENUECAT_WEBHOOK_SECRET>`
+header. The route uses `timingSafeEqual` to validate.
 
-Phase 6 implementation: option 1 (JWS decode) — simpler, faster. Cache the JWK
-set for 24h.
+Events handled (idempotent on `apple_transaction_id`):
+
+- `INITIAL_PURCHASE`, `RENEWAL`, `PRODUCT_CHANGE`, `TRANSFER` → upsert
+  `subscriptions` (plan=`standard`, provider=`apple`, period_end=event
+  expiration). Insert `payments` row.
+- `CANCELLATION` → `subscriptions.cancel_at_period_end = true` (user keeps
+  access until period_end).
+- `EXPIRATION` → `subscriptions.status = 'expired'`.
+- `BILLING_ISSUE` → `subscriptions.status = 'past_due'`.
+- `UNCANCELLATION` → clear `cancel_at_period_end`.
+- `NON_RENEWING_PURCHASE` → insert `credits` row with `apple_payg` source.
+
+`event.app_user_id` is the Supabase user id (set by the client's
+`Purchases.shared.logIn(userId:)`).
+
+The webhook is **complementary** to the client RPC: the client call binds the
+transaction to the current user the moment the purchase completes; the
+webhook keeps the row fresh during renewals/refunds while the app is closed.
+
+## Entitlement gate — UI source of truth
+
+`EntitlementGate` reads `subscriptions` + `credits` from Supabase. RC's
+`customerInfo` is only the fallback when the network read fails. This matters
+because a web Standard subscriber logging in on iOS will have a
+`subscriptions` row but no RC entitlement — Supabase must win.
+
+The gate exposes `isStandard`, `creditsRemaining`, `currentPeriodEnd`. The
+Dashboard tag, Settings billing card, and Scan paywall all read from it via
+`@Environment(EntitlementGate.self)` injected at `RootView`.
+
+## Paywall
+
+`Features/Billing/BillingPaywallView.swift` is a full-screen cover with two
+GFCards (Standard + PAYG). Triggered:
+
+1. **Quota exceeded** during scan — `ScanView` catches `APIError.quotaExceeded`
+   and presents the paywall instead of erroring.
+2. **Settings → UPGRADE** for users on the free tier.
+3. **Settings → MANAGE SUBSCRIPTION** for Standard users opens
+   `https://apps.apple.com/account/subscriptions` instead (Apple owns this
+   UX).
+
+Design follows `claude/design/tokens.md`: dark `#121212` background, sharp 2px
+corners, UPPERCASE JetBrains Mono labels, Inter body, green is the only
+decorative color. No `backdrop-blur`.
 
 ## Edge cases
 
-- **User signs out and back in** with different account: `restore()` re-applies
-  any active entitlement on the new Supabase user. We attach the
-  `originalTransactionId` to the *current* Supabase user at reconcile time. If
-  the same Apple ID was previously bound to a different Supabase user, we
-  detect this in the webhook and refuse with `409 transaction_already_bound`.
-- **Refund**: Apple notification arrives async. Server marks credits expired or
-  subscription canceled. iOS app refreshes quota on next launch.
-- **Sandbox vs production**: client tells server which environment via
-  `environment` field. Server picks the right Apple endpoint.
+- **Cross-account theft attempt.** A user who signs in with a different
+  Supabase account on a device with an active Apple ID entitlement triggers
+  `claim_apple_subscription` → `{action:'rejected', owner:<other_uuid>}`.
+  `RevenueCatService` stores `rejectedOriginalTransactionId` so the gate
+  ignores the RC entitlement; UI continues to show FREE TIER.
+- **Refund.** Apple notification arrives async via the RC webhook
+  (`EXPIRATION` for subs; for PAYG, no fully reliable Apple signal — manual
+  admin grant correction may be needed).
+- **Sandbox vs production.** RC handles both; `event.environment` is logged
+  in the `payments.raw` jsonb for forensics.
 
-## What this gives us
+## What App Review needs to know
 
-- A single quota source of truth (Supabase).
-- iOS users can pay without leaving the app.
-- Web users keep their cheaper prices (no Apple cut).
-- Cross-platform: a web Standard subscriber sees their plan when they log in
-  on iOS — no re-purchase needed.
-- Restore purchases works on a new device.
-
-## What this costs us
-
-- 15–30% Apple cut on iOS revenue.
-- ~1 week of build work (Phase 6).
-- App Store review will scrutinize this — be ready to explain "Same product as
-  flag.red web, sold via IAP per guideline 3.1.1".
+- Both products are the same digital good as `greenflagged.xyz` (the web app).
+- Higher in-app prices reflect Apple's commission ($28.99 vs $25; $3.99 vs
+  $3.00). Per guideline 3.1.3(b) this is permitted.
+- Review notes should explain: "Same product as greenflagged.xyz web; sold via IAP
+  per guideline 3.1.1. Subscriptions can be managed from
+  Settings → BILLING → MANAGE SUBSCRIPTION."

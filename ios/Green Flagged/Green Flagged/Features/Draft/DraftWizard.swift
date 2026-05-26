@@ -11,6 +11,9 @@ import SwiftUI
 
 enum WizardStep: Hashable, Sendable {
     case industry
+    /// Inserted by Stream D: pick a saved business profile + client (or skip)
+    /// before the answer pages. Pre-selects defaults if the user has them.
+    case presets
     case questions(pageIndex: Int)
     case review
 }
@@ -32,6 +35,12 @@ struct DraftWizard: View {
     @State private var path = NavigationPath()
     @State private var validationErrors: [String: String] = [:]
     @State private var showCancelConfirm = false
+
+    // Stream D: selected business profile + client. business_profile_id is
+    // sent in the draft POST body; the client selection pre-fills the
+    // counterparty fields (`client` / `client_address`) when applicable.
+    @State private var selectedBusinessProfileId: String? = nil
+    @State private var selectedClientId: String? = nil
 
     /// Page break sizing — the wizard groups N consecutive questions per
     /// page. Tuned so each industry's longest schema (freelance, 14
@@ -86,20 +95,26 @@ struct DraftWizard: View {
     private var navTitle: String {
         switch step {
         case .industry:           return "NEW DRAFT"
+        case .presets:            return "PRESETS"
         case .questions:          return answers.industry?.label ?? "NEW DRAFT"
         case .review:             return "REVIEW"
         }
     }
 
+    /// Step counter denominator is `totalPages + 3` (industry + presets +
+    /// review + question pages). Pre-industry the question count is 0, so the
+    /// industry-only display reads "1 / 3" as before.
     private var stepCounter: String {
+        let total = totalPages + 3
         switch step {
         case .industry:
-            return "1 / 3"
+            return "1 / \(total)"
+        case .presets:
+            return "2 / \(total)"
         case .questions(let idx):
-            let count = totalPages
-            return "\(idx + 2) / \(count + 2)"
+            return "\(idx + 3) / \(total)"
         case .review:
-            return "\(totalPages + 2) / \(totalPages + 2)"
+            return "\(total) / \(total)"
         }
     }
 
@@ -112,8 +127,25 @@ struct DraftWizard: View {
             IndustryPickerView { picked in
                 answers.setIndustry(picked)
                 validationErrors.removeAll()
-                step = .questions(pageIndex: 0)
+                step = .presets
             }
+
+        case .presets:
+            PresetsPage(
+                selectedBusinessProfileId: $selectedBusinessProfileId,
+                selectedClientId: $selectedClientId,
+                onBack: {
+                    step = .industry
+                },
+                onContinue: { profile, client in
+                    selectedBusinessProfileId = profile?.id
+                    selectedClientId = client?.id
+                    if let client {
+                        prefillCounterparty(from: client)
+                    }
+                    step = .questions(pageIndex: 0)
+                }
+            )
 
         case .questions(let pageIndex):
             QuestionsPage(
@@ -157,9 +189,43 @@ struct DraftWizard: View {
     private func goBack(from pageIndex: Int) {
         validationErrors.removeAll()
         if pageIndex == 0 {
-            step = .industry
+            step = .presets
         } else {
             step = .questions(pageIndex: pageIndex - 1)
+        }
+    }
+
+    /// Writes the client's identity + address into the canonical wizard
+    /// answers so the user doesn't retype. Only the three industries that use
+    /// `client` / `client_address` IDs benefit; NDA's parties have their own
+    /// schema and are intentionally left alone.
+    private func prefillCounterparty(from client: Client) {
+        let firstName = client.firstName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let familyName = client.familyName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let businessName = client.businessName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasIdentity = !(firstName?.isEmpty ?? true)
+            || !(familyName?.isEmpty ?? true)
+            || !(businessName?.isEmpty ?? true)
+        if hasIdentity {
+            answers.values["client"] = .nameGroup(
+                first: firstName,
+                family: familyName,
+                business: businessName
+            )
+        }
+
+        let country = client.countryCode?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let city = client.city?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let street = client.street?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let postal = client.postalCode?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasAddress = [country, city, street, postal].contains { !($0?.isEmpty ?? true) }
+        if hasAddress {
+            answers.values["client_address"] = .address(
+                country: country,
+                city: city,
+                street: street,
+                postal: postal
+            )
         }
     }
 
@@ -294,6 +360,9 @@ struct DraftWizard: View {
         if let j = (answers.jurisdiction ?? jurisdictionFromGoverningLaw)?
             .trimmingCharacters(in: .whitespacesAndNewlines), !j.isEmpty {
             body["jurisdiction"] = j
+        }
+        if let bpid = selectedBusinessProfileId {
+            body["business_profile_id"] = bpid
         }
 
         let bodyData: Data
@@ -550,13 +619,7 @@ private struct ReviewPage: View {
     }
 
     private func errorBanner(_ message: String) -> some View {
-        GFFrame(bracketColor: Color.gf.sevRed) {
-            Text(message.uppercased())
-                .font(.gf.label)
-                .tracking(1.0)
-                .foregroundStyle(Color.gf.sevRed)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
+        GFErrorBanner(message: message)
     }
 
     @ViewBuilder
@@ -578,6 +641,258 @@ private struct ReviewPage: View {
             )
         }
         .padding(.top, Spacing.s3)
+    }
+}
+
+// MARK: - Step 1.5: presets picker
+
+/// Inserted between the industry picker and the question pages. Loads the
+/// user's saved business profiles + clients from `/api/business-profiles` and
+/// `/api/clients`, pre-selects whichever row has `is_default = true`, and
+/// hands the selections back to the wizard on CONTINUE. Both pickers offer a
+/// "Skip" option so the wizard remains usable for users who haven't filled
+/// out any presets yet.
+private struct PresetsPage: View {
+    @Binding var selectedBusinessProfileId: String?
+    @Binding var selectedClientId: String?
+    var onBack: () -> Void
+    var onContinue: (_ profile: BusinessProfile?, _ client: Client?) -> Void
+
+    @State private var profiles: [BusinessProfile] = []
+    @State private var clients: [Client] = []
+    @State private var isLoading: Bool = false
+    @State private var loadError: String? = nil
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.s5) {
+                header
+
+                if isLoading && profiles.isEmpty && clients.isEmpty {
+                    loadingRow
+                } else if let loadError {
+                    errorBanner(loadError)
+                } else {
+                    businessCard
+                    clientCard
+                }
+
+                navRow
+            }
+            .padding(.horizontal, Spacing.s4)
+            .padding(.vertical, Spacing.s5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .task { await loadIfNeeded() }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: Spacing.s2) {
+            Text("// 02 / PRESETS")
+                .font(.gf.label)
+                .tracking(1.0)
+                .foregroundStyle(Color.gf.fg2)
+            Text("Pick your sides")
+                .font(.gf.h2)
+                .foregroundStyle(Color.gf.fg1)
+            Text("Reuse a saved business profile and client so we can autofill the boring fields. Skip if you don't have presets yet.")
+                .font(.gf.bodySm)
+                .foregroundStyle(Color.gf.fg3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var loadingRow: some View {
+        HStack {
+            Spacer()
+            VStack(spacing: Spacing.s3) {
+                GFTag(label: "LOADING…")
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .tint(Color.gf.fg2)
+            }
+            Spacer()
+        }
+        .padding(.vertical, Spacing.s5)
+    }
+
+    private func errorBanner(_ message: String) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.s2) {
+            GFErrorBanner(message: message)
+            GFButton(label: "RETRY", style: .ghost) {
+                Task { await load() }
+            }
+        }
+    }
+
+    private var businessCard: some View {
+        GFCard {
+            VStack(alignment: .leading, spacing: Spacing.s3) {
+                Text("// MY BUSINESS PROFILE")
+                    .font(.gf.label)
+                    .tracking(1.0)
+                    .foregroundStyle(Color.gf.fg3)
+
+                if profiles.isEmpty {
+                    Text("No saved profiles. Settings → Business Profiles to add one.")
+                        .font(.gf.bodySm)
+                        .foregroundStyle(Color.gf.fg3)
+                } else {
+                    VStack(spacing: 0) {
+                        pickerRow(
+                            label: "Skip",
+                            isSelected: selectedBusinessProfileId == nil
+                        ) {
+                            selectedBusinessProfileId = nil
+                        }
+                        ForEach(profiles) { profile in
+                            VStack(spacing: 0) {
+                                Rectangle().fill(Color.gf.rule).frame(height: 1)
+                                pickerRow(
+                                    label: profileLabel(profile),
+                                    badge: profile.isDefault ? "DEFAULT" : nil,
+                                    isSelected: selectedBusinessProfileId == profile.id
+                                ) {
+                                    selectedBusinessProfileId = profile.id
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var clientCard: some View {
+        GFCard {
+            VStack(alignment: .leading, spacing: Spacing.s3) {
+                Text("// CLIENT")
+                    .font(.gf.label)
+                    .tracking(1.0)
+                    .foregroundStyle(Color.gf.fg3)
+
+                if clients.isEmpty {
+                    Text("No saved clients. Settings → Clients to add one.")
+                        .font(.gf.bodySm)
+                        .foregroundStyle(Color.gf.fg3)
+                } else {
+                    VStack(spacing: 0) {
+                        pickerRow(
+                            label: "Skip",
+                            isSelected: selectedClientId == nil
+                        ) {
+                            selectedClientId = nil
+                        }
+                        ForEach(clients) { client in
+                            VStack(spacing: 0) {
+                                Rectangle().fill(Color.gf.rule).frame(height: 1)
+                                pickerRow(
+                                    label: clientLabel(client),
+                                    badge: client.isDefault ? "DEFAULT" : nil,
+                                    isSelected: selectedClientId == client.id
+                                ) {
+                                    selectedClientId = client.id
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func pickerRow(
+        label: String,
+        badge: String? = nil,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: Spacing.s3) {
+                Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
+                    .foregroundStyle(isSelected ? Color.gf.accent : Color.gf.fg3)
+                Text(label)
+                    .font(.gf.body)
+                    .foregroundStyle(Color.gf.fg1)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                if let badge {
+                    GFTag(label: badge, severity: .green)
+                }
+            }
+            .padding(.vertical, Spacing.s2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var navRow: some View {
+        HStack(spacing: Spacing.s3) {
+            GFButton(label: "BACK", style: .ghost, showsArrow: false, action: onBack)
+            GFButton(label: "CONTINUE", style: .solid) {
+                let profile = profiles.first { $0.id == selectedBusinessProfileId }
+                let client = clients.first { $0.id == selectedClientId }
+                onContinue(profile, client)
+            }
+        }
+        .padding(.top, Spacing.s3)
+    }
+
+    // MARK: - Loading
+
+    private func loadIfNeeded() async {
+        guard profiles.isEmpty, clients.isEmpty, !isLoading else { return }
+        await load()
+    }
+
+    private func load() async {
+        if isLoading { return }
+        isLoading = true
+        loadError = nil
+        defer { isLoading = false }
+        do {
+            async let p = BusinessProfileRepository.shared.list()
+            async let c = ClientRepository.shared.list()
+            let (loadedProfiles, loadedClients) = try await (p, c)
+            profiles = loadedProfiles
+            clients = loadedClients
+            // Pre-select the user's defaults the first time we land here.
+            if selectedBusinessProfileId == nil,
+               let def = profiles.first(where: { $0.isDefault }) {
+                selectedBusinessProfileId = def.id
+            }
+            if selectedClientId == nil,
+               let def = clients.first(where: { $0.isDefault }) {
+                selectedClientId = def.id
+            }
+        } catch {
+            loadError = String(describing: error)
+        }
+    }
+
+    // MARK: - Labels
+
+    private func profileLabel(_ p: BusinessProfile) -> String {
+        if let label = p.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty {
+            return label
+        }
+        if let biz = p.businessName?.trimmingCharacters(in: .whitespacesAndNewlines), !biz.isEmpty {
+            return biz
+        }
+        let parts = [p.firstName, p.familyName]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? "Untitled profile" : parts.joined(separator: " ")
+    }
+
+    private func clientLabel(_ c: Client) -> String {
+        if let biz = c.businessName?.trimmingCharacters(in: .whitespacesAndNewlines), !biz.isEmpty {
+            return biz
+        }
+        let parts = [c.firstName, c.familyName]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? "Untitled client" : parts.joined(separator: " ")
     }
 }
 

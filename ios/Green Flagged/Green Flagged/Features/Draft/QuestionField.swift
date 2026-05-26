@@ -13,6 +13,10 @@ struct QuestionField: View {
     /// on a CONTINUE press; we surface a red GFTag under the input.
     var validationError: String?
 
+    @Environment(Session.self) private var session
+    @State private var isImproving = false
+    @State private var improveTag: (label: String, severity: Severity)?
+
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
             header
@@ -81,8 +85,8 @@ struct QuestionField: View {
         case .address:
             addressControl()
 
-        case .improveTextarea(_, _, _, let placeholder, let minRows, _, _):
-            improveTextareaControl(placeholder: placeholder, minRows: minRows)
+        case .improveTextarea(_, _, let fieldKind, let placeholder, let minRows, _, _):
+            improveTextareaControl(fieldKind: fieldKind, placeholder: placeholder, minRows: minRows)
         }
     }
 
@@ -488,7 +492,11 @@ struct QuestionField: View {
     // MARK: - Improve textarea
 
     @ViewBuilder
-    private func improveTextareaControl(placeholder: String?, minRows: Int) -> some View {
+    private func improveTextareaControl(
+        fieldKind: String,
+        placeholder: String?,
+        minRows: Int
+    ) -> some View {
         let binding = Binding<String>(
             get: {
                 if case .string(let s) = answers.values[question.id] { return s }
@@ -501,14 +509,18 @@ struct QuestionField: View {
 
         // 22pt per row matches the web wizard's vertical rhythm closely enough.
         let minHeight = CGFloat(minRows) * 22.0
+        let kind = ImproveFieldKind(rawValue: fieldKind) ?? .scope
 
         VStack(alignment: .leading, spacing: Spacing.s2) {
             HStack(alignment: .center) {
                 Spacer(minLength: 0)
-                GFButton(label: "IMPROVE", style: .link, showsArrow: false) {
-                    // TODO: call /api/contracts/improve — POST { text, field_kind }
-                    // and replace binding.wrappedValue with response.improved.
-                    // Stretch goal; deliberately left as a placeholder for now.
+                GFButton(
+                    label: isImproving ? "IMPROVING…" : "IMPROVE",
+                    style: .link,
+                    showsArrow: false,
+                    isDisabled: isImproving
+                ) {
+                    improveAction(binding: binding, kind: kind)
                 }
             }
             GFFrame {
@@ -528,6 +540,34 @@ struct QuestionField: View {
                         .frame(minHeight: minHeight)
                         .accessibilityLabel(question.label)
                 }
+            }
+            if let tag = improveTag {
+                GFTag(label: tag.label, severity: tag.severity)
+            }
+        }
+    }
+
+    private func improveAction(binding: Binding<String>, kind: ImproveFieldKind) {
+        let current = binding.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !current.isEmpty else {
+            improveTag = (label: "TYPE SOMETHING FIRST", severity: .yellow)
+            return
+        }
+        improveTag = nil
+        isImproving = true
+        Task {
+            defer { isImproving = false }
+            do {
+                let token = try await session.currentAccessToken()
+                let improved = try await APIClient.shared.improve(
+                    text: binding.wrappedValue,
+                    fieldKind: kind,
+                    token: token
+                )
+                binding.wrappedValue = improved
+                improveTag = nil
+            } catch {
+                improveTag = (label: String(describing: error).uppercased(), severity: .red)
             }
         }
     }

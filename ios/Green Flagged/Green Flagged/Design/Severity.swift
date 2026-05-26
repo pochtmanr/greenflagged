@@ -29,4 +29,26 @@ nonisolated enum Severity: String, Codable, Sendable, CaseIterable {
         case .red:    Color.gf.sevRed
         }
     }
+
+    /// Pale-fill counterpart of `color`, used for severity hero stripes and
+    /// chip backgrounds. Shared by VerdictView + ContractDetailView.
+    @MainActor
+    var tint: Color {
+        switch self {
+        case .green:  Color.gf.sevGreenTint
+        case .yellow: Color.gf.sevYellowTint
+        case .orange: Color.gf.sevOrangeTint
+        case .red:    Color.gf.sevRedTint
+        }
+    }
+
+    /// 4-letter mono token used inside `GFTag` chips and PDF headers.
+    var shortLabel: String {
+        switch self {
+        case .green:  "OK"
+        case .yellow: "WARN"
+        case .orange: "HIGH"
+        case .red:    "CRITICAL"
+        }
+    }
 }

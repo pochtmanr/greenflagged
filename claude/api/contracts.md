@@ -2,7 +2,7 @@
 
 Two backends:
 1. **Supabase** (project `pwvtjuklkfelpxzxjmsi`) — direct SDK access, RLS-enforced.
-2. **landing/** Next.js API at `flag.red` (prod) / `http://localhost:3000` (dev) —
+
    for anything that needs server-side AI keys, PDF rendering, or webhook secrets.
 
 The iOS app authenticates with Supabase; for landing/ calls it sends the

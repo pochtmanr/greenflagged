@@ -7,6 +7,7 @@ import VisionKit
 
 struct ScanView: View {
     @Environment(Session.self) private var session
+    @Environment(EntitlementGate.self) private var gate
     @State private var vm = ScanViewModel()
     @State private var showFilePicker = false
     @State private var showDocScanner = false
@@ -144,8 +145,27 @@ struct ScanView: View {
             )
         ) {
             if let id = doneContractId {
-                ContractDetailView(contractId: id)
+                NavigationStack {
+                    ContractDetailView(contractId: id)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button("Done") {
+                                    doneContractId = nil
+                                    vm.pickedFileURL = nil
+                                    vm.pastedText = ""
+                                    vm.state = .idle
+                                }
+                                .tint(Color.gf.fg1)
+                            }
+                        }
+                }
             }
+        }
+        .fullScreenCover(isPresented: $vm.presentPaywall, onDismiss: {
+            // Re-check entitlement so a fresh purchase unblocks the next submit.
+            Task { await gate.refresh(reason: .purchaseCompleted) }
+        }) {
+            BillingPaywallView()
         }
     }
 
@@ -315,6 +335,7 @@ private final class ScanViewModel {
     var pickedFileURL: URL? = nil
     var state: ScanState = .idle
     var session: Session?
+    var presentPaywall: Bool = false
 
     var canSubmit: Bool {
         if case .ready = state { return true }
@@ -345,9 +366,9 @@ private final class ScanViewModel {
 
         state = .uploading
 
-        let token: String
+        let ownerId: String
         do {
-            token = try await session.currentAccessToken()
+            ownerId = try await session.currentUserId()
         } catch {
             state = .error("SESSION EXPIRED — SIGN IN AGAIN")
             await session.signOut()
@@ -357,30 +378,18 @@ private final class ScanViewModel {
         state = .reviewing
 
         do {
-            let response = try await APIClient.shared.scan(
+            let contractId = try await ScanService.shared.scan(
                 fileURL: fileURL,
-                text: text,
-                token: token
+                pastedText: text,
+                ownerId: ownerId
             )
-            state = .done(contractId: response.contract_id)
-        } catch let error as APIError {
-            switch error {
-            case .unauthenticated:
-                state = .error("SESSION EXPIRED — SIGN IN AGAIN")
-                await session.signOut()
-            case .quotaExceeded(let message):
-                state = .error("OUT OF SCANS · \(message.uppercased())")
-            case .aiFailed(let message):
-                state = .error("AI REVIEW FAILED · \(message.uppercased())")
-            case .server(_, let message):
-                state = .error(message.uppercased())
-            case .transport(let underlying):
-                state = .error(underlying.localizedDescription.uppercased())
-            case .decoding:
-                state = .error("RESPONSE CORRUPTED — TRY AGAIN")
-            case .invalidInput(let message):
-                state = .error(message.uppercased())
-            }
+            NotificationCenter.default.post(
+                name: ContractRepository.contractsChanged,
+                object: nil
+            )
+            state = .done(contractId: contractId)
+        } catch let error as ScanServiceError {
+            state = .error(error.description.uppercased())
         } catch {
             state = .error(error.localizedDescription.uppercased())
         }

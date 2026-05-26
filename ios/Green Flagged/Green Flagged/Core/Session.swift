@@ -105,6 +105,8 @@ final class Session {
         } catch {
             Log.auth.error("signOut failed: \(error.localizedDescription, privacy: .public)")
         }
+        await RevenueCatService.shared.logOut()
+        EntitlementGate.shared.reset()
         authState = .signedOut
     }
 
@@ -150,6 +152,12 @@ final class Session {
             // sign-in: the row probably doesn't exist yet for first-time users.
             authState = .needsOnboarding(user: user)
         }
+
+        // Both signedIn and needsOnboarding paths have a real Supabase user we
+        // can use to identify the RC subject — billing should track the user
+        // even before onboarding completes.
+        await RevenueCatService.shared.logIn(userId: user.id.uuidString.lowercased())
+        await EntitlementGate.shared.refresh(reason: .sessionChange)
     }
 
     // MARK: - Errors

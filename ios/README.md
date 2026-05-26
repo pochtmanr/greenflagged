@@ -1,6 +1,6 @@
 # Green Flagged — iOS
 
-Native SwiftUI app for `flag.red`. iOS 26+, Xcode 16, Swift 6.
+Native SwiftUI app for `greenflagged.xyz`. iOS 26+, Xcode 16, Swift 6.
 
 ## Status
 

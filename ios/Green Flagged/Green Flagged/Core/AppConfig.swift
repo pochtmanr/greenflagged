@@ -18,6 +18,9 @@ enum AppConfig {
     nonisolated static let supabaseURL: URL = try! readURL("SUPABASE_URL")
     nonisolated static let supabaseAnonKey: String = try! readString("SUPABASE_ANON_KEY")
     nonisolated static let apiBaseURL: URL = try! readAPIBase()
+    nonisolated static let revenueCatAPIKey: String = try! readString("REVENUECAT_IOS_API_KEY")
+    nonisolated static let openAIAPIKey: String = try! readString("OPENAI_API_KEY")
+    nonisolated static let openAIReviewModel: String = (try? readString("OPENAI_REVIEW_MODEL")) ?? "gpt-4o-mini"
 
     /// Universal callback URL for OAuth flows. Must match the
     /// `CFBundleURLSchemes` entry in Info.plist and the redirect URL

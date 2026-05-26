@@ -19,6 +19,13 @@ struct Contract: Codable, Sendable, Identifiable {
     let severity: Severity?
     let createdAt: Date
     let retentionUntil: Date?
+    /// Branded styling chosen for this contract. Nil until the user opens the
+    /// editor and saves once — callers should fall back to `ContractStyle.default`.
+    let style: ContractStyle?
+    /// Business profile attached to this contract (drives logo + header info
+    /// in the styled preview / PDF). String to keep flexibility for non-UUID
+    /// fixtures; convert at the boundary.
+    let businessProfileId: String?
 
     /// Convenience accessor — falls back to a placeholder rather than crashing
     /// when a draft hasn't been titled yet.
@@ -29,13 +36,15 @@ struct Contract: Codable, Sendable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id
-        case ownerId        = "owner_id"
+        case ownerId           = "owner_id"
         case kind
         case industry
         case title
-        case storagePath    = "storage_path"
-        case severity       = "verdict_severity"
-        case createdAt      = "created_at"
-        case retentionUntil = "retention_until"
+        case storagePath       = "storage_path"
+        case severity          = "verdict_severity"
+        case createdAt         = "created_at"
+        case retentionUntil    = "retention_until"
+        case style
+        case businessProfileId = "business_profile_id"
     }
 }

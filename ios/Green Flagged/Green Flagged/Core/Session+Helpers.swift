@@ -30,4 +30,16 @@ extension Session {
         }
         return nil
     }
+
+    /// Lowercased UUID string for the signed-in Supabase user, suitable for
+    /// `owner_id` columns and storage paths. Throws if the user isn't signed in.
+    func currentUserId() async throws -> String {
+        if let user { return user.id.uuidString.lowercased() }
+        throw SessionMissingUser.notSignedIn
+    }
+}
+
+enum SessionMissingUser: Error, CustomStringConvertible {
+    case notSignedIn
+    var description: String { "Not signed in" }
 }
